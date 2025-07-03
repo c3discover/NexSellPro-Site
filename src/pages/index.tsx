@@ -108,7 +108,9 @@ function HeroSection() {
         </p>
         {/* Call-to-action button - links to your Stripe payment */}
         <a 
-          href="https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00" 
+          href="https://buy.stripe.com/test_xxxYourSandboxLinkxxx"
+          target="_blank"
+          rel="noopener noreferrer"
           className="inline-block bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
         >
           Get Founding Member Access - $29

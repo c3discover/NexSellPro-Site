@@ -11,6 +11,7 @@
 // Imports:
 ////////////////////////////////////////////////
 import { NextPage } from 'next';
+import Link from 'next/link';
 
 ////////////////////////////////////////////////
 // Types and Interfaces:
@@ -73,12 +74,12 @@ const Error: NextPage<ErrorProps> = ({ statusCode }) => {
         <p className="text-gray-600 mb-8">
           {getErrorMessage(statusCode)}
         </p>
-        <a
+        <Link
           href="/"
           className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary hover:bg-primary-dark"
         >
           Return to Home
-        </a>
+        </Link>
       </div>
     </div>
   );

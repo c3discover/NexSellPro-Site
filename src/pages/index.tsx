@@ -10,6 +10,7 @@
 ////////////////////////////////////////////////
 import React from 'react';
 import Head from 'next/head';
+import Image from 'next/image';
 
 ////////////////////////////////////////////////
 // Types and Interfaces:
@@ -32,9 +33,11 @@ export default function HomePage() {
       <header className="sticky top-0 z-30 h-20" style={{background: 'linear-gradient(90deg, #0a2540 0%, #0a2540 40%, #fff 100%)'}}>
         <nav className="container mx-auto flex items-center justify-between h-20 px-4" aria-label="Main navigation">
           <a href="#hero" className="flex items-center group focus:outline-none ml-2">
-            <img
+            <Image
               src="/assets/color-logo.svg"
               alt="NexSellPro Logo"
+              width={200}
+              height={80}
               className="h-20 w-auto mr-0"
               style={{ maxWidth: '200px' }}
             />
@@ -484,9 +487,11 @@ function FooterSection() {
     <footer className="px-4 py-16 bg-gray-900 text-white">
       <div className="container mx-auto max-w-4xl text-center">
         {/* White logo above contact info */}
-        <img
+        <Image
           src="/assets/white-logo.svg"
           alt="NexSellPro Logo White"
+          width={160}
+          height={48}
           className="mx-auto mb-6 h-12 w-auto"
           style={{ maxWidth: '160px' }}
         />

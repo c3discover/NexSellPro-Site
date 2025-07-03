@@ -1,8 +1,8 @@
 /**
  * @fileoverview Thank you page for NexSellPro post-purchase
  * @author NexSellPro
- * @created 2024-03-27
- * @lastModified 2024-03-27
+ * @created 2025-07-02
+ * @lastModified 2025-07-02
  */
 
 ////////////////////////////////////////////////
@@ -99,7 +99,7 @@ function ThankYouMessage() {
       {/* Confirmation message */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
         <p className="text-lg font-semibold text-blue-900 mb-2">
-          🎉 You're now a Founding Member!
+          🎉 You are now a Founding Member!
         </p>
         <p className="text-blue-700">
           Thank you for believing in NexSellPro. Your early support means everything to us.
@@ -129,7 +129,7 @@ function NextStepsSection() {
           <div>
             <h3 className=" text-black font-bold mb-1">Check Your Email</h3>
             <p className="text-gray-600">
-              We've sent your access instructions and login details to your email. 
+              We have sent your access instructions and login details to your email. 
               It should arrive within the next few minutes.
             </p>
           </div>
@@ -174,7 +174,7 @@ function ImportantReminder() {
   return (
     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
       <p className="text-sm text-yellow-800">
-        <strong>Didn't receive an email?</strong> Check your spam folder or 
+        <strong>Didn&apos;t receive an email?</strong> Check your spam folder or 
         contact us at support@nexsellpro.com
       </p>
     </div>
@@ -218,7 +218,7 @@ function SupportSection() {
 function FinalMessage() {
   return (
     <p className="mt-8 text-sm text-gray-500">
-      P.S. Keep an eye on your inbox - we'll be sharing exclusive Founding Member 
+      P.S. Keep an eye on your inbox - we will be sharing exclusive Founding Member 
       perks and early feature previews!
     </p>
   );

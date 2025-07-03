@@ -423,7 +423,7 @@ function FAQSection() {
               Does this work on all Walmart pages?
             </h3>
             <p className="text-gray-700">
-              Yes! NexSellPro works on Walmart Product Pages! Any product you browse on Walmart.com, we'll show you the data.
+              Yes! NexSellPro works on Walmart Product Pages! Any product you browse on Walmart.com, we will show you the data.
             </p>
           </div>
           
@@ -433,7 +433,7 @@ function FAQSection() {
               How accurate are the profit calculations?
             </h3>
             <p className="text-gray-700">
-              We use Walmart's official fee structure and update it regularly. You can 
+              We use Walmart&apos;s official fee structure and update it regularly. You can 
               also customize your cost inputs for even more accurate calculations.
             </p>
           </div>
@@ -466,8 +466,8 @@ function FAQSection() {
               Do you offer refunds?
             </h3>
             <p className="text-gray-700">
-              Yes, we offer a 30-day money-back guarantee. If NexSellPro doesn't 
-              help you find profitable products, we'll refund your purchase.
+              Yes, we offer a 30-day money-back guarantee. If NexSellPro doesn&apos;t 
+              help you find profitable products, we&apos;ll refund your purchase.
             </p>
           </div>
         </div>

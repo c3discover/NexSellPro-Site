@@ -108,7 +108,7 @@ function HeroSection() {
         </p>
         {/* Call-to-action button - links to your Stripe payment */}
         <a 
-          href="https://buy.stripe.com/test_4gMdRbgtV8yWaVG8mu43S00" 
+          href="https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00" 
           className="inline-block bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
         >
           Get Founding Member Access - $29
@@ -351,7 +351,7 @@ function PricingSection() {
           
           {/* CTA button */}
           <a 
-            href="https://buy.stripe.com/test_4gMdRbgtV8yWaVG8mu43S00" 
+            href="https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00" 
             className="block w-full bg-blue-600 text-white py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
           >
             Claim Your Founding Member Spot
@@ -504,7 +504,7 @@ function FooterSection() {
         
         {/* Final CTA */}
         <a 
-          href="https://buy.stripe.com/test_4gMdRbgtV8yWaVG8mu43S00" 
+          href="https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00" 
           className="inline-block bg-white text-gray-900 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg mb-8"
         >
           Get Started for $29

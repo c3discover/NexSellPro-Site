@@ -48,6 +48,10 @@ export default function HomePage() {
             <li><a href="#pricing" className="text-gray-900 hover:text-blue-600 transition-colors focus:outline-none focus:text-blue-700">Pricing</a></li>
             <li><a href="#faqs" className="text-gray-900 hover:text-blue-600 transition-colors focus:outline-none focus:text-blue-700">FAQs</a></li>
           </ul>
+          {/* Mobile login link */}
+          <a href="/login" className="md:hidden text-gray-900 hover:text-blue-600 transition-colors focus:outline-none focus:text-blue-700 font-medium">
+            Login
+          </a>
         </nav>
       </header>
 
@@ -106,17 +110,30 @@ function HeroSection() {
           NexSellPro analyzes Walmart Marketplace listings instantly, showing you 
           real profit margins, ROI, and competition data.
         </p>
-        {/* Call-to-action button - links to your Stripe payment */}
-        <a 
-          href="https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00" 
-          className="inline-block bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
-        >
-          Get Founding Member Access - $29
-        </a>
-        {/* Trust indicator */}
-        <p className="mt-4 text-sm text-gray-500">
+        {/* Call-to-action buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
+          <a 
+            href="/signup" 
+            className="inline-block bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
+          >
+            Get Started - Free
+          </a>
+          <a 
+            href="https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00" 
+            className="inline-block bg-green-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-green-700 transition-colors shadow-lg"
+          >
+            Get Founding Member Access - $29
+          </a>
+        </div>
+        {/* Trust indicator and login banner */}
+        <p className="mt-4 text-sm text-gray-500 mb-4">
           🚀 Built by sellers, for sellers • Limited time beta pricing
         </p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 max-w-md mx-auto">
+          <p className="text-sm text-blue-800">
+            Already have an account? <a href="/login" className="font-semibold hover:underline">Sign in here</a>
+          </p>
+        </div>
       </div>
     </section>
   );

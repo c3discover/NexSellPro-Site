@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { getCurrentUser, signOut } from '@/lib/supabase';
+import { getCurrentUser, signOut, getUserProfile, type UserProfile } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -20,6 +21,10 @@ export default function DashboardPage() {
           return;
         }
         setUser(currentUser);
+        
+        // Fetch user profile
+        const profile = await getUserProfile(currentUser.id);
+        setUserProfile(profile);
       } catch (error) {
         console.error('Auth check failed:', error);
         router.replace('/login');
@@ -70,7 +75,9 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-4">
                 <h1 className="text-2xl font-bold gradient-text">NexSellPro Dashboard</h1>
                 <span className="text-gray-400">|</span>
-                <span className="text-gray-300">Welcome, {user?.email}</span>
+                <span className="text-gray-300">
+                  Welcome, {userProfile?.first_name || user?.email}
+                </span>
               </div>
               <button
                 onClick={handleSignOut}
@@ -88,7 +95,9 @@ export default function DashboardPage() {
           <div className="max-w-4xl mx-auto space-y-8">
             {/* Welcome Section */}
             <div className="card p-8">
-              <h2 className="text-3xl font-bold mb-4 gradient-text">Welcome to NexSellPro!</h2>
+              <h2 className="text-3xl font-bold mb-4 gradient-text">
+                Welcome to NexSellPro, {userProfile?.first_name || 'there'}!
+              </h2>
               <p className="text-gray-300 mb-6">
                 You're all set up! Here's what you need to do next to start finding profitable products on Walmart Marketplace.
               </p>
@@ -175,6 +184,24 @@ export default function DashboardPage() {
             <div className="card p-8">
               <h3 className="text-2xl font-bold mb-4 gradient-text">Account Settings</h3>
               <div className="space-y-4">
+                <div className="flex items-center justify-between py-3 border-b border-slate-700">
+                  <div>
+                    <div className="font-medium text-white">Name</div>
+                    <div className="text-sm text-gray-400">
+                      {userProfile?.first_name} {userProfile?.last_name}
+                    </div>
+                  </div>
+                  <button className="text-accent hover:underline text-sm">Edit</button>
+                </div>
+                {userProfile?.business_name && (
+                  <div className="flex items-center justify-between py-3 border-b border-slate-700">
+                    <div>
+                      <div className="font-medium text-white">Business Name</div>
+                      <div className="text-sm text-gray-400">{userProfile.business_name}</div>
+                    </div>
+                    <button className="text-accent hover:underline text-sm">Edit</button>
+                  </div>
+                )}
                 <div className="flex items-center justify-between py-3 border-b border-slate-700">
                   <div>
                     <div className="font-medium text-white">Email</div>

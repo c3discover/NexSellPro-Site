@@ -68,10 +68,18 @@ export default function LoginPage() {
         return;
       }
       setSuccess(true);
-      // If user came from extension, pass through
+      // Check for redirect parameter from middleware
+      const redirectTo = typeof router.query.redirect === 'string' ? router.query.redirect : undefined;
       const from = typeof router.query.from === 'string' ? router.query.from : undefined;
+      
       setTimeout(() => {
-        router.replace(from ? `/dashboard?from=${encodeURIComponent(from)}` : '/dashboard');
+        if (redirectTo && redirectTo.startsWith('/')) {
+          router.replace(redirectTo);
+        } else if (from) {
+          router.replace(`/dashboard?from=${encodeURIComponent(from)}`);
+        } else {
+          router.replace('/dashboard');
+        }
       }, 500);
     } catch (err: any) {
       setErrors({ general: err.message || 'Unexpected error. Please try again.' });
@@ -100,33 +108,35 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold text-center mb-2 gradient-text">Sign in to NexSellPro</h1>
           <p className="text-center text-gray-400 mb-6">Welcome back! Enter your details to continue.</p>
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
+            <div className="relative">
               <label htmlFor="email" className="block text-sm font-medium text-gray-200 mb-1">Email</label>
               <input
                 id="email"
                 name="email"
                 type="email"
                 autoComplete="email"
-                className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition ${errors.email ? 'border-red-500' : ''}`}
+                className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.email ? 'border-red-500' : ''}`}
                 value={form.email}
                 onChange={handleChange}
                 disabled={loading}
                 required
+                placeholder="Enter your email"
               />
               {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
             </div>
-            <div>
+            <div className="relative">
               <label htmlFor="password" className="block text-sm font-medium text-gray-200 mb-1">Password</label>
               <input
                 id="password"
                 name="password"
                 type="password"
                 autoComplete="current-password"
-                className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition ${errors.password ? 'border-red-500' : ''}`}
+                className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.password ? 'border-red-500' : ''}`}
                 value={form.password}
                 onChange={handleChange}
                 disabled={loading}
                 required
+                placeholder="Enter your password"
               />
               {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
             </div>

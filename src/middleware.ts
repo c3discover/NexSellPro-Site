@@ -38,7 +38,7 @@ export async function middleware(request: NextRequest) {
   const basePath = getBasePath(pathname);
 
   // Create a response object to handle cookies
-  let response = NextResponse.next();
+  const response = NextResponse.next();
 
   // Create Supabase middleware client
   const supabase = createServerClient(

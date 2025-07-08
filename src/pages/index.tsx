@@ -11,6 +11,7 @@
 import React from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
+import Link from 'next/link';
 
 ////////////////////////////////////////////////
 // Types and Interfaces:
@@ -32,7 +33,7 @@ export default function HomePage() {
       {/* Logo-first header with improved gradient and larger logo */}
       <header className="sticky top-0 z-30 h-20" style={{background: 'linear-gradient(90deg, #0a2540 0%, #0a2540 40%, #fff 100%)'}}>
         <nav className="container mx-auto flex items-center justify-between h-20 px-4" aria-label="Main navigation">
-          <a href="#hero" className="flex items-center group focus:outline-none ml-2">
+          <Link href="#hero" className="flex items-center group focus:outline-none ml-2">
             <Image
               src="/assets/color-logo.svg"
               alt="NexSellPro Logo"
@@ -41,17 +42,17 @@ export default function HomePage() {
               className="h-20 w-auto mr-0"
               style={{ maxWidth: '200px' }}
             />
-          </a>
+          </Link>
           <ul className="hidden md:flex space-x-8 text-base font-medium">
-            <li><a href="#features" className="text-gray-900 hover:text-blue-600 transition-colors focus:outline-none focus:text-blue-700">Features</a></li>
-            <li><a href="#how-it-works" className="text-gray-900 hover:text-blue-600 transition-colors focus:outline-none focus:text-blue-700">How It Works</a></li>
-            <li><a href="#pricing" className="text-gray-900 hover:text-blue-600 transition-colors focus:outline-none focus:text-blue-700">Pricing</a></li>
-            <li><a href="#faqs" className="text-gray-900 hover:text-blue-600 transition-colors focus:outline-none focus:text-blue-700">FAQs</a></li>
+            <li><Link href="#features" className="text-gray-900 hover:text-blue-600 transition-colors focus:outline-none focus:text-blue-700">Features</Link></li>
+            <li><Link href="#how-it-works" className="text-gray-900 hover:text-blue-600 transition-colors focus:outline-none focus:text-blue-700">How It Works</Link></li>
+            <li><Link href="#pricing" className="text-gray-900 hover:text-blue-600 transition-colors focus:outline-none focus:text-blue-700">Pricing</Link></li>
+            <li><Link href="#faqs" className="text-gray-900 hover:text-blue-600 transition-colors focus:outline-none focus:text-blue-700">FAQs</Link></li>
           </ul>
           {/* Mobile login link */}
-          <a href="/login" className="md:hidden text-gray-900 hover:text-blue-600 transition-colors focus:outline-none focus:text-blue-700 font-medium">
+          <Link href="/login" className="md:hidden text-gray-900 hover:text-blue-600 transition-colors focus:outline-none focus:text-blue-700 font-medium">
             Login
-          </a>
+          </Link>
         </nav>
       </header>
 
@@ -112,18 +113,18 @@ function HeroSection() {
         </p>
         {/* Call-to-action buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
-          <a 
+          <Link 
             href="/signup" 
             className="inline-block bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
           >
             Get Started - Free
-          </a>
-          <a 
+          </Link>
+          <Link 
             href="https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00" 
             className="inline-block bg-green-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-green-700 transition-colors shadow-lg"
           >
             Get Founding Member Access - $29
-          </a>
+          </Link>
         </div>
         {/* Trust indicator and login banner */}
         <p className="mt-4 text-sm text-gray-500 mb-4">
@@ -131,7 +132,7 @@ function HeroSection() {
         </p>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 max-w-md mx-auto">
           <p className="text-sm text-blue-800">
-            Already have an account? <a href="/login" className="font-semibold hover:underline">Sign in here</a>
+            Already have an account? <Link href="/login" className="font-semibold hover:underline">Sign in here</Link>
           </p>
         </div>
       </div>
@@ -367,12 +368,12 @@ function PricingSection() {
           </ul>
           
           {/* CTA button */}
-          <a 
+          <Link 
             href="https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00" 
             className="block w-full bg-blue-600 text-white py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
           >
             Claim Your Founding Member Spot
-          </a>
+          </Link>
           
           <p className="mt-4 text-sm text-gray-600">
             One-time payment • Instant access • 30-day guarantee
@@ -520,12 +521,12 @@ function FooterSection() {
         </p>
         
         {/* Final CTA */}
-        <a 
+        <Link 
           href="https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00" 
           className="inline-block bg-white text-gray-900 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg mb-8"
         >
           Get Started for $29
-        </a>
+        </Link>
         
         {/* Contact info */}
         <div className="text-sm text-gray-400">

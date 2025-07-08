@@ -99,7 +99,7 @@ export default function DashboardPage() {
                 Welcome to NexSellPro, {userProfile?.first_name || 'there'}!
               </h2>
               <p className="text-gray-300 mb-6">
-                You're all set up! Here's what you need to do next to start finding profitable products on Walmart Marketplace.
+                You&rsquo;re all set up! Here&rsquo;s what you need to do next to start finding profitable products on Walmart Marketplace.
               </p>
               <div className="bg-accent/10 border border-accent/20 rounded-lg p-6 mb-6">
                 <h3 className="text-xl font-semibold mb-3 text-accent">🚀 Next Steps</h3>
@@ -158,12 +158,12 @@ export default function DashboardPage() {
             <div id="extension-download" className="card p-8">
               <h3 className="text-2xl font-bold mb-4 gradient-text">Chrome Extension</h3>
               <p className="text-gray-300 mb-6">
-                Our browser extension is the key to unlocking NexSellPro's power. Install it to start analyzing products instantly.
+                Our browser extension is the key to unlocking NexSellPro&rsquo;s power. Install it to start analyzing products instantly.
               </p>
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6">
                 <p className="text-yellow-400 text-sm">
                   <strong>Coming Soon!</strong> The Chrome extension is currently in development. 
-                  You'll be notified as soon as it's ready for download.
+                  You&rsquo;ll be notified as soon as it&rsquo;s ready for download.
                 </p>
               </div>
               <button className="btn-primary opacity-60 cursor-not-allowed" disabled>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Link from 'next/link';
 import { supabase, getCurrentUser } from '@/lib/supabase';
 
 // TypeScript types for form data and errors
@@ -22,7 +23,6 @@ export default function LoginPage() {
   const [form, setForm] = useState<LoginForm>(initialForm);
   const [errors, setErrors] = useState<FormError>({});
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
 
   // Clear errors when user starts typing
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -67,7 +67,7 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      setSuccess(true);
+
       // Check for redirect parameter from middleware
       const redirectTo = typeof router.query.redirect === 'string' ? router.query.redirect : undefined;
       const from = typeof router.query.from === 'string' ? router.query.from : undefined;
@@ -81,8 +81,9 @@ export default function LoginPage() {
           router.replace('/dashboard');
         }
       }, 500);
-    } catch (err: any) {
-      setErrors({ general: err.message || 'Unexpected error. Please try again.' });
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unexpected error. Please try again.';
+      setErrors({ general: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -170,7 +171,7 @@ export default function LoginPage() {
           </button>
           <div className="mt-6 text-center text-gray-400 text-sm">
             Don&apos;t have an account?{' '}
-            <a href="/signup" className="text-accent hover:underline hover-underline">Sign up</a>
+            <Link href="/signup" className="text-accent hover:underline hover-underline">Sign up</Link>
           </div>
         </div>
       </div>

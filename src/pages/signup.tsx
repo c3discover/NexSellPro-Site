@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Link from 'next/link';
 import { supabase, upsertUserProfile } from '@/lib/supabase';
 
 // TypeScript types for form data and errors
@@ -36,7 +36,6 @@ const initialForm: SignupForm = {
 };
 
 export default function SignupPage() {
-  const router = useRouter();
   const [form, setForm] = useState<SignupForm>(initialForm);
   const [errors, setErrors] = useState<FormError>({});
   const [loading, setLoading] = useState(false);
@@ -125,8 +124,9 @@ export default function SignupPage() {
       setSuccess(true);
       // Note: For signup, we don't redirect immediately since user needs to confirm email
       // The redirect will happen after email confirmation
-    } catch (err: any) {
-      setErrors({ general: err.message || 'Unexpected error. Please try again.' });
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unexpected error. Please try again.';
+      setErrors({ general: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -150,8 +150,9 @@ export default function SignupPage() {
       } else {
         setResent(true);
       }
-    } catch (err: any) {
-      setErrors({ general: err.message || 'Unexpected error. Please try again.' });
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unexpected error. Please try again.';
+      setErrors({ general: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -169,7 +170,7 @@ export default function SignupPage() {
           {success ? (
             <div className="text-center">
               <div className="text-2xl mb-2 text-accent">Check your email, {form.firstName}!</div>
-              <p className="text-gray-300 mb-4">We've sent a confirmation link to <span className="font-semibold text-white">{form.email}</span>.<br />Click the link to finish signing up and access your dashboard.</p>
+              <p className="text-gray-300 mb-4">We&rsquo;ve sent a confirmation link to <span className="font-semibold text-white">{form.email}</span>.<br />Click the link to finish signing up and access your dashboard.</p>
               {resent && <div className="text-green-400 text-sm mb-2">Confirmation email resent!</div>}
               {errors.general && <div className="text-red-400 text-sm mb-2">{errors.general}</div>}
               <button
@@ -189,7 +190,7 @@ export default function SignupPage() {
               </button>
               <div className="mt-6 text-gray-400 text-sm">
                 Already have an account?{' '}
-                <a href="/login" className="text-accent hover:underline hover-underline">Sign in</a>
+                <Link href="/login" className="text-accent hover:underline hover-underline">Sign in</Link>
               </div>
             </div>
           ) : (
@@ -338,11 +339,11 @@ export default function SignupPage() {
               </button>
               <div className="mt-4 text-xs text-gray-400 text-center">
                 By signing up, you agree to our{' '}
-                <a href="/terms" className="text-accent hover:underline hover-underline">Terms of Service</a>.
+                <Link href="/terms" className="text-accent hover:underline hover-underline">Terms of Service</Link>.
               </div>
               <div className="mt-6 text-center text-gray-400 text-sm">
                 Already have an account?{' '}
-                <a href="/login" className="text-accent hover:underline hover-underline">Sign in</a>
+                <Link href="/login" className="text-accent hover:underline hover-underline">Sign in</Link>
               </div>
             </form>
           )}

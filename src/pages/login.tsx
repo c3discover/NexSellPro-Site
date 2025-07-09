@@ -18,6 +18,48 @@ interface FormError {
 
 const initialForm: LoginForm = { email: '', password: '' };
 
+// Error Boundary Component
+class LoginErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Login page error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 px-4">
+          <div className="card max-w-md w-full mx-auto p-8 md:p-10 glass animate-fadeIn shadow-xl">
+            <h1 className="text-2xl font-bold text-center mb-4 text-red-400">Something went wrong</h1>
+            <p className="text-center text-gray-400 mb-6">
+              We encountered an error while loading the login page. Please try refreshing the page.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="btn-primary w-full"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [form, setForm] = useState<LoginForm>(initialForm);
@@ -46,45 +88,71 @@ export default function LoginPage() {
     return errs;
   }
 
-  // Handle form submit
+  // Handle form submit with proper error handling
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setErrors({});
-    const validation = validate(form);
-    if (Object.keys(validation).length > 0) {
-      setErrors(validation);
-      return;
-    }
-    setLoading(true);
-    setErrors({});
+    
+    try {
+      setErrors({});
+      const validation = validate(form);
+      if (Object.keys(validation).length > 0) {
+        setErrors(validation);
+        return;
+      }
+      
+      setLoading(true);
+      setErrors({});
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: form.email,
-      password: form.password,
-    });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      });
 
-    if (error) {
-      console.error("Login failed:", error.message);
-      alert("Login failed: " + error.message); // Or use a toast
+      if (error) {
+        console.error("Login failed:", error.message);
+        setErrors({ general: error.message });
+        setLoading(false);
+        return;
+      }
+
+      if (data.user) {
+        console.log("Login successful:", data.user.email);
+        // Redirect to dashboard on successful login
+        router.push("/dashboard");
+      } else {
+        setErrors({ general: "Login failed. Please try again." });
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Unexpected error during login:", error);
+      setErrors({ 
+        general: error instanceof Error 
+          ? error.message 
+          : "An unexpected error occurred. Please try again." 
+      });
       setLoading(false);
-      return;
     }
-
-    router.push("/dashboard"); // or use router.replace(...) if preferred
   }
 
   // Redirect if already logged in
   React.useEffect(() => {
-    getCurrentUser().then((user) => {
-      if (user) {
-        router.replace('/dashboard');
+    const checkAuth = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user) {
+          router.replace('/dashboard');
+        }
+      } catch (error) {
+        console.error("Error checking authentication status:", error);
+        // Don't show error to user for auth check failures
       }
-    });
-    // eslint-disable-next-line
-  }, []);
+    };
+    
+    checkAuth();
+  }, [router]);
 
   return (
-    <>
+    <LoginErrorBoundary>
       <Head>
         <title>Login | NexSellPro</title>
       </Head>
@@ -125,7 +193,11 @@ export default function LoginPage() {
               />
               {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
             </div>
-            {errors.general && <div className="text-red-500 text-sm text-center">{errors.general}</div>}
+            {errors.general && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                <p className="text-red-400 text-sm text-center">{errors.general}</p>
+              </div>
+            )}
             <button
               type="submit"
               className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -159,6 +231,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-    </>
+    </LoginErrorBoundary>
   );
 } 

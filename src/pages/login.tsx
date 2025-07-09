@@ -93,19 +93,7 @@ export default function LoginPage() {
     return errs;
   }
 
-  // Validate redirect URL for security
-  function isValidRedirectUrl(url: string): boolean {
-    try {
-      const decodedUrl = decodeURIComponent(url);
-      // Allow relative URLs and URLs from our domain
-      return decodedUrl.startsWith('/') || 
-             decodedUrl.startsWith('https://nexsellpro.com') ||
-             decodedUrl.startsWith('http://localhost:3000') ||
-             decodedUrl.startsWith('https://localhost:3000');
-    } catch {
-      return false;
-    }
-  }
+
 
   // Handle form submit with proper error handling
   async function handleSubmit(e: React.FormEvent | React.MouseEvent) {

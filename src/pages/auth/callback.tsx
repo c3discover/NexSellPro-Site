@@ -1,3 +1,4 @@
+// src/pages/auth/callback.tsx
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
@@ -11,57 +12,105 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Get the error and error_description from URL if they exist
+        // First, check if there's an error in the URL
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const errorParam = hashParams.get('error');
-        const errorDescription = hashParams.get('error_description');
+        const queryParams = new URLSearchParams(window.location.search);
+        
+        // Check for errors in both hash and query params
+        const errorParam = hashParams.get('error') || queryParams.get('error');
+        const errorDescription = hashParams.get('error_description') || queryParams.get('error_description');
 
         if (errorParam) {
           console.error('Auth error from URL:', errorParam, errorDescription);
           setError(errorDescription || 'Authentication failed');
           setLoading(false);
-          
-          // Redirect to login after showing error
           setTimeout(() => router.push('/login'), 3000);
           return;
         }
 
-        // Exchange the code for a session
-        const { data, error: sessionError } = await supabase.auth.getSession();
+        // Get the access token from the URL
+        const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
+        const type = hashParams.get('type') || queryParams.get('type');
 
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          setError(sessionError.message);
-          setLoading(false);
-          
-          // Redirect to login after showing error
-          setTimeout(() => router.push('/login'), 3000);
-          return;
-        }
+        console.log('Callback type:', type);
+        console.log('Has access token:', !!accessToken);
 
-        if (data?.session) {
-          // Force refresh the user to ensure latest data
-          await supabase.auth.getUser();
+        if (type === 'signup' || type === 'email') {
+          // This is an email confirmation
+          console.log('Processing email confirmation...');
           
-          // Small delay to ensure session is properly set
-          await new Promise(resolve => setTimeout(resolve, 300));
+          // The session should already be set by Supabase from the URL
+          // Let's get the current session
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
           
-          // Redirect to dashboard
-          router.replace('/dashboard');
+          if (sessionError) {
+            console.error('Session error:', sessionError);
+            setError('Failed to confirm email. Please try again.');
+            setLoading(false);
+            setTimeout(() => router.push('/login'), 3000);
+            return;
+          }
+
+          if (session) {
+            console.log('Email confirmed, user logged in:', session.user.email);
+            
+            // Give Supabase a moment to fully establish the session
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Redirect to dashboard
+            router.replace('/dashboard');
+          } else {
+            // No session but we have an access token - try to get the session
+            if (accessToken) {
+              console.log('No session found, but have access token. Refreshing...');
+              
+              // Force a session refresh
+              const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
+              
+              if (newSession) {
+                console.log('Session refreshed successfully');
+                router.replace('/dashboard');
+              } else {
+                console.error('Could not establish session:', refreshError);
+                setError('Email confirmed but could not log you in. Please log in manually.');
+                setLoading(false);
+                setTimeout(() => router.push('/login'), 3000);
+              }
+            } else {
+              setError('Email confirmed. Please log in to continue.');
+              setLoading(false);
+              setTimeout(() => router.push('/login'), 3000);
+            }
+          }
+        } else if (type === 'recovery') {
+          // This is a password reset
+          console.log('Processing password reset...');
+          
+          // For password reset, we should have a session
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session) {
+            // Redirect to reset password page
+            router.replace('/reset-password');
+          } else {
+            setError('Invalid or expired reset link');
+            setLoading(false);
+            setTimeout(() => router.push('/reset-password-request'), 3000);
+          }
         } else {
-          // No session found
-          setError('No active session found. Please try logging in again.');
-          setLoading(false);
+          // Unknown type or just a regular auth callback
+          const { data: { session } } = await supabase.auth.getSession();
           
-          // Redirect to login
-          setTimeout(() => router.push('/login'), 3000);
+          if (session) {
+            router.replace('/dashboard');
+          } else {
+            router.replace('/login');
+          }
         }
       } catch (error) {
         console.error('Callback error:', error);
         setError('An unexpected error occurred');
         setLoading(false);
-        
-        // Redirect to login after showing error
         setTimeout(() => router.push('/login'), 3000);
       }
     };
@@ -72,7 +121,7 @@ export default function AuthCallback() {
   return (
     <>
       <Head>
-        <title>Confirming Email | NexSellPro</title>
+        <title>Confirming | NexSellPro</title>
       </Head>
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 px-4">
         <div className="card max-w-md w-full mx-auto p-8 md:p-10 glass animate-fadeIn shadow-xl text-center">
@@ -82,17 +131,17 @@ export default function AuthCallback() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
               </svg>
-              <h1 className="text-2xl font-bold mb-2 gradient-text">Confirming your email...</h1>
-              <p className="text-gray-400">Please wait while we verify your account.</p>
+              <h1 className="text-2xl font-bold mb-2 gradient-text">Processing...</h1>
+              <p className="text-gray-400">Please wait while we confirm your account.</p>
             </>
           )}
           
           {error && (
             <>
-              <div className="text-4xl mb-4">❌</div>
-              <h1 className="text-2xl font-bold mb-2 text-red-400">Confirmation Failed</h1>
+              <div className="text-4xl mb-4">⚠️</div>
+              <h1 className="text-2xl font-bold mb-2 text-yellow-400">Action Required</h1>
               <p className="text-gray-400 mb-4">{error}</p>
-              <p className="text-gray-500 text-sm">Redirecting to login page...</p>
+              <p className="text-gray-500 text-sm">Redirecting...</p>
             </>
           )}
         </div>

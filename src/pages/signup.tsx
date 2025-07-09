@@ -98,7 +98,7 @@ export default function SignupPage() {
         email: form.email,
         password: form.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`, // ✅ NEW
+          emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`,
         },
       });
       if (error) {
@@ -144,7 +144,7 @@ export default function SignupPage() {
         email: form.email,
         password: form.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`, // ✅ NEW
+          emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`,
         },
       });
       if (error) {

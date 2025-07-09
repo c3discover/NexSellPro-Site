@@ -31,7 +31,7 @@ export default function ResetPasswordRequestPage() {
       } else {
         setSuccess(true);
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -49,7 +49,7 @@ export default function ResetPasswordRequestPage() {
             <>
               <h1 className="text-3xl font-bold text-center mb-2 gradient-text">Reset Your Password</h1>
               <p className="text-center text-gray-400 mb-6">
-                Enter your email address and we'll send you a link to reset your password.
+                Enter your email address and we&apos;ll send you a link to reset your password.
               </p>
               
               <form onSubmit={handleSubmit} className="space-y-5">
@@ -102,10 +102,10 @@ export default function ResetPasswordRequestPage() {
               <div className="text-5xl mb-4">✉️</div>
               <h2 className="text-2xl font-bold mb-4 gradient-text">Check Your Email</h2>
               <p className="text-gray-400 mb-6">
-                We've sent a password reset link to <strong className="text-white">{email}</strong>
+                We&apos;ve sent a password reset link to <strong className="text-white">{email}</strong>
               </p>
               <p className="text-gray-400 text-sm mb-6">
-                Click the link in the email to reset your password. If you don't see it, check your spam folder.
+                Click the link in the email to reset your password. If you don&apos;t see it, check your spam folder.
               </p>
               <Link href="/login" className="btn-primary inline-block">
                 Back to Login

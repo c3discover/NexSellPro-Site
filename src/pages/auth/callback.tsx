@@ -41,7 +41,7 @@ export default function AuthCallback() {
 
         if (data?.session) {
           // Force refresh the user to ensure latest data
-          const { data: { user } } = await supabase.auth.getUser();
+          await supabase.auth.getUser();
           
           // Small delay to ensure session is properly set
           await new Promise(resolve => setTimeout(resolve, 300));

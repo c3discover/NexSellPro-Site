@@ -32,7 +32,7 @@ export default function ResetPasswordPage() {
         } else {
           setValidToken(true);
         }
-      } catch (err) {
+      } catch {
         if (!mounted) return;
         setError('Failed to validate reset link. Please try again.');
         setValidToken(false);
@@ -86,7 +86,7 @@ export default function ResetPasswordPage() {
           router.push('/login');
         }, 3000);
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);

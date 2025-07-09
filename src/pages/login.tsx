@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { supabase, getCurrentUser } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 // TypeScript types for form data and errors
 interface LoginForm {
@@ -61,11 +61,9 @@ class LoginErrorBoundary extends React.Component<
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const [form, setForm] = useState<LoginForm>(initialForm);
   const [errors, setErrors] = useState<FormError>({});
   const [loading, setLoading] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   // Clear errors when user starts typing
@@ -135,7 +133,7 @@ export default function LoginPage() {
       if (data.user && data.session) {
         // Force refresh the session to ensure it's properly synced
         try {
-          const { data: { user }, error: refreshError } = await supabase.auth.getUser();
+          const { error: refreshError } = await supabase.auth.getUser();
           
           if (refreshError) {
             console.error("Error refreshing user:", refreshError);
@@ -175,7 +173,7 @@ export default function LoginPage() {
 
   // Let middleware handle authentication checks
   React.useEffect(() => {
-    setAuthChecked(true);
+    // Authentication check handled by middleware
   }, []);
 
   return (

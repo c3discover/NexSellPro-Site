@@ -4,7 +4,6 @@ import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const basePath = pathname;
 
   // Create a response object to handle cookies
   const response = NextResponse.next();

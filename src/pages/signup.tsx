@@ -25,11 +25,11 @@ interface FormError {
   general?: string;
 }
 
-const initialForm: SignupForm = { 
-  firstName: '', 
-  lastName: '', 
-  email: '', 
-  password: '', 
+const initialForm: SignupForm = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  password: '',
   confirmPassword: '',
   businessName: '',
   howDidYouHear: ''
@@ -51,7 +51,7 @@ export default function SignupPage() {
   // Validate form fields
   function validate(values: SignupForm): FormError {
     const errs: FormError = {};
-    
+
     // Required fields
     if (!values.firstName?.trim()) {
       errs.firstName = 'First name is required.';
@@ -76,7 +76,7 @@ export default function SignupPage() {
     } else if (values.password !== values.confirmPassword) {
       errs.confirmPassword = 'Passwords do not match.';
     }
-    
+
     return errs;
   }
 
@@ -96,7 +96,7 @@ export default function SignupPage() {
         email: form.email,
         password: form.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`, // ✅ NEW
         },
       });
       if (error) {
@@ -142,7 +142,7 @@ export default function SignupPage() {
         email: form.email,
         password: form.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`, // ✅ NEW
         },
       });
       if (error) {

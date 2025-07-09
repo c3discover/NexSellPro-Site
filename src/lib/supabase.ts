@@ -14,10 +14,9 @@ if (!supabaseAnonKey) {
 // Create a single supabase client for the whole app
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true, // Use localStorage for session persistence
+    persistSession: true, // Use cookies for session persistence (default)
     autoRefreshToken: true, // Enable auto token refresh
     detectSessionInUrl: true, // Detect session in URL for OAuth redirects
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
   },
 });
 

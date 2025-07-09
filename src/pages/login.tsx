@@ -65,11 +65,8 @@ export default function LoginPage() {
   const [form, setForm] = useState<LoginForm>(initialForm);
   const [errors, setErrors] = useState<FormError>({});
   const [loading, setLoading] = useState(false);
-
-  // Debug logging at component mount
-  React.useEffect(() => {
-    console.log('Login page loaded successfully');
-  }, []);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Clear errors when user starts typing
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -93,12 +90,8 @@ export default function LoginPage() {
     return errs;
   }
 
-
-
   // Handle form submit with proper error handling
   async function handleSubmit(e: React.FormEvent | React.MouseEvent) {
-    console.log('Button clicked, starting login...');
-    
     // Prevent default form submission
     if (e.type === 'submit') {
       e.preventDefault();
@@ -108,15 +101,12 @@ export default function LoginPage() {
       setErrors({});
       const validation = validate(form);
       if (Object.keys(validation).length > 0) {
-        console.log('Form validation failed:', validation);
         setErrors(validation);
         return;
       }
 
       setLoading(true);
       setErrors({});
-
-      console.log('Attempting login with email:', form.email);
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: form.email,
@@ -125,55 +115,48 @@ export default function LoginPage() {
 
       if (error) {
         console.error("Login failed:", error.message);
-        setErrors({ general: error.message });
+        
+        // Provide more user-friendly error messages
+        let userFriendlyError = error.message;
+        
+        if (error.message.includes('Invalid login credentials')) {
+          userFriendlyError = 'Invalid email or password. Please check your credentials and try again.';
+        } else if (error.message.includes('Email not confirmed')) {
+          userFriendlyError = 'Please check your email and click the confirmation link before signing in.';
+        } else if (error.message.includes('Too many requests')) {
+          userFriendlyError = 'Too many login attempts. Please wait a moment before trying again.';
+        }
+        
+        setErrors({ general: userFriendlyError });
         setLoading(false);
         return;
       }
 
       if (data.user && data.session) {
-        // Detailed debugging
-        console.log("=== LOGIN SUCCESS DEBUG ===");
-        console.log("1. User email:", data.user.email);
-        console.log("2. Session exists:", !!data.session);
-        console.log("3. Session access token:", data.session?.access_token ? "Present" : "Missing");
-        console.log("4. Current URL:", window.location.href);
-        console.log("5. Window origin:", window.location.origin);
-        
-        // Check for redirect parameter
-        const urlParams = new URLSearchParams(window.location.search);
-        const redirectTo = urlParams.get('redirect');
-        console.log("6. Redirect param:", redirectTo);
-        
-        // Method 1: Try immediate redirect with replace
-        console.log("7. Attempting redirect with location.replace...");
-        
+        // Force refresh the session to ensure it's properly synced
         try {
-          // Give Supabase a moment to properly set cookies
-          await new Promise(resolve => setTimeout(resolve, 200));
+          const { data: { user }, error: refreshError } = await supabase.auth.getUser();
           
-          if (redirectTo && redirectTo.includes('dashboard')) {
-            const decodedUrl = decodeURIComponent(redirectTo);
-            console.log("8. Decoded redirect URL:", decodedUrl);
-            
-            // Extract just the pathname if it's a full URL
-            const url = new URL(decodedUrl);
-            console.log("9. Redirecting to pathname:", url.pathname);
-            window.location.pathname = url.pathname;
-          } else {
-            console.log("10. No redirect param, going directly to /dashboard");
-            // Force navigation to dashboard
-            window.location.pathname = '/dashboard';
+          if (refreshError) {
+            console.error("Error refreshing user:", refreshError);
           }
-        } catch (error) {
-          console.error("11. Redirect error:", error);
-          console.log("12. Fallback: Forcing reload to dashboard");
-          
-          // Method 2: Brute force approach
-          window.location.href = window.location.origin + '/dashboard';
+        } catch (err) {
+          console.error("Session refresh failed:", err);
         }
         
-        // Keep loading state - don't set to false
-        console.log("13. Redirect initiated, keeping loading state...");
+        // Small delay to ensure session is set
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Continue with redirect logic...
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectTo = urlParams.get('redirect');
+        
+        if (redirectTo && redirectTo.includes('dashboard')) {
+          const url = new URL(decodeURIComponent(redirectTo));
+          window.location.href = url.pathname;
+        } else {
+          window.location.href = '/dashboard';
+        }
       } else {
         console.error("Login succeeded but no session data!");
         setErrors({ general: "Login succeeded but session was not created. Please try again." });
@@ -190,35 +173,9 @@ export default function LoginPage() {
     }
   }
 
-  // Redirect if already logged in
+  // Let middleware handle authentication checks
   React.useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const user = await getCurrentUser();
-        if (user) {
-          console.log('User already authenticated, redirecting to dashboard');
-          router.replace('/dashboard');
-        }
-      } catch (error) {
-        console.error("Error checking authentication status:", error);
-        // Don't show error to user for auth check failures
-      }
-    };
-
-    checkAuth();
-  }, [router]);
-
-  // Add this useEffect to check session state on mount
-  React.useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log("Current session on login page:", session ? "Active" : "None");
-      if (session) {
-        console.log("Already logged in, redirecting to dashboard");
-        window.location.pathname = '/dashboard';
-      }
-    };
-    checkSession();
+    setAuthChecked(true);
   }, []);
 
   return (
@@ -249,19 +206,44 @@ export default function LoginPage() {
             </div>
             <div className="relative">
               <label htmlFor="password" className="block text-sm font-medium text-gray-200 mb-1">Password</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.password ? 'border-red-500' : ''}`}
-                value={form.password}
-                onChange={handleChange}
-                disabled={loading}
-                required
-                placeholder="Enter your password"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  className={`w-full px-4 py-3 pr-12 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.password ? 'border-red-500' : ''}`}
+                  value={form.password}
+                  onChange={handleChange}
+                  disabled={loading}
+                  required
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors z-20"
+                  disabled={loading}
+                >
+                  {showPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
+            </div>
+            {/* Add this after the password input div */}
+            <div className="text-right">
+              <Link href="/reset-password-request" className="text-sm text-accent hover:underline">
+                Forgot your password?
+              </Link>
             </div>
             {errors.general && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">

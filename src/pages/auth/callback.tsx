@@ -40,11 +40,14 @@ export default function AuthCallback() {
         }
 
         if (data?.session) {
-          // Successfully logged in!
-          console.log('Email confirmed, redirecting to dashboard...');
+          // Force refresh the user to ensure latest data
+          const { data: { user } } = await supabase.auth.getUser();
           
           // Small delay to ensure session is properly set
-          setTimeout(() => router.replace('/dashboard'), 100);
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Redirect to dashboard
+          router.replace('/dashboard');
         } else {
           // No session found
           setError('No active session found. Please try logging in again.');

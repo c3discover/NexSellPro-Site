@@ -11,29 +11,26 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
 
-  // Check authentication on page load
+  // Get user data on page load (middleware already checked auth)
   useEffect(() => {
-    async function checkAuth() {
+    async function loadUserData() {
       try {
         const currentUser = await getCurrentUser();
-        if (!currentUser) {
-          router.replace('/login');
-          return;
+        if (currentUser) {
+          setUser(currentUser);
+          
+          // Fetch user profile
+          const profile = await getUserProfile(currentUser.id);
+          setUserProfile(profile);
         }
-        setUser(currentUser);
-        
-        // Fetch user profile
-        const profile = await getUserProfile(currentUser.id);
-        setUserProfile(profile);
       } catch (error) {
-        console.error('Auth check failed:', error);
-        router.replace('/login');
+        console.error('Failed to load user data:', error);
       } finally {
         setLoading(false);
       }
     }
-    checkAuth();
-  }, [router]);
+    loadUserData();
+  }, []);
 
   // Handle sign out
   async function handleSignOut() {

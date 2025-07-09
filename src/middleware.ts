@@ -2,20 +2,9 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const basePath = pathname;
-
-  // TEMPORARY DEBUG: Log all middleware hits
-  console.log(`[Middleware] Processing: ${basePath}`);
-
-  // TEMPORARY: Bypass middleware for login/dashboard during debugging
-  if (basePath === '/login' || basePath === '/dashboard') {
-    console.log(`[Middleware] Bypassing auth check for ${basePath} (DEBUG MODE)`);
-    return NextResponse.next();
-  }
 
   // Create a response object to handle cookies
   const response = NextResponse.next();
@@ -42,26 +31,11 @@ export async function middleware(request: NextRequest) {
     // Get session
     const { data: { session }, error } = await supabase.auth.getSession();
 
-    console.log(`[Middleware] Session check for ${basePath}:`, {
-      hasSession: !!session,
-      error: error?.message || 'none',
-      userEmail: session?.user?.email || 'none'
-    });
-
     if (error) {
       console.error('Middleware auth error:', error.message);
     }
 
     const isAuthenticated = !!session;
-
-    // Debug logging (remove in production)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Middleware:', {
-        pathname,
-        isAuthenticated,
-        url: request.url
-      });
-    }
 
     // Handle protected routes (dashboard, profile, settings)
     if (pathname.startsWith('/dashboard') || pathname.startsWith('/profile') || pathname.startsWith('/settings')) {
@@ -102,10 +76,10 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Only run middleware on specific routes that need authentication checks
-    '/dashboard/:path*',
     '/profile/:path*',
     '/settings/:path*',
-    '/login',
-    '/signup'
+    '/signup',
+    '/dashboard/:path*',
+    '/login'
   ],
 }; 

@@ -57,36 +57,22 @@ export default function LoginPage() {
     }
     setLoading(true);
     setErrors({});
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: form.email,
-        password: form.password,
-      });
-      if (error || !data.user) {
-        setErrors({ general: error?.message || 'Login failed. Please try again.' });
-        setLoading(false);
-        return;
-      }
+    
+    const { error, data } = await supabase.auth.signInWithPassword({
+      email: form.email,
+      password: form.password,
+    });
 
-      // Check for redirect parameter from middleware
-      const redirectTo = typeof router.query.redirect === 'string' ? router.query.redirect : undefined;
-      const from = typeof router.query.from === 'string' ? router.query.from : undefined;
-      
-      setTimeout(() => {
-        if (redirectTo && redirectTo.startsWith('/')) {
-          router.replace(redirectTo);
-        } else if (from) {
-          router.replace(`/dashboard?from=${encodeURIComponent(from)}`);
-        } else {
-          router.replace('/dashboard');
-        }
-      }, 500);
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unexpected error. Please try again.';
-      setErrors({ general: errorMessage });
-    } finally {
+    if (error) {
+      console.error('Login error:', error.message);
+      alert('Login failed: ' + error.message); // or show it in UI
       setLoading(false);
+      return;
     }
+
+    // 🔁 Redirect user after successful login
+    const redirectTo = new URLSearchParams(window.location.search).get("redirect") || "/dashboard";
+    window.location.href = redirectTo;
   }
 
   // Redirect if already logged in

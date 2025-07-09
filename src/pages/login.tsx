@@ -57,22 +57,20 @@ export default function LoginPage() {
     }
     setLoading(true);
     setErrors({});
-    
-    const { error, data } = await supabase.auth.signInWithPassword({
+
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: form.email,
       password: form.password,
     });
 
     if (error) {
-      console.error('Login error:', error.message);
-      alert('Login failed: ' + error.message); // or show it in UI
+      console.error("Login failed:", error.message);
+      alert("Login failed: " + error.message); // Or use a toast
       setLoading(false);
       return;
     }
 
-    // 🔁 Redirect user after successful login
-    const redirectTo = new URLSearchParams(window.location.search).get("redirect") || "/dashboard";
-    window.location.href = redirectTo;
+    router.push("/dashboard"); // or use router.replace(...) if preferred
   }
 
   // Redirect if already logged in

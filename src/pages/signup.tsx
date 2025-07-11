@@ -27,12 +27,6 @@ interface FormError {
 }
 
 // Extended error types for better error handling
-interface SignupError {
-  type: 'validation' | 'auth' | 'profile' | 'network';
-  message: string;
-  field?: keyof SignupForm;
-}
-
 interface SignupState {
   loading: boolean;
   success: boolean;

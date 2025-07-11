@@ -77,7 +77,7 @@ export async function middleware(request: NextRequest) {
       console.log('[Middleware] Refreshing session...');
     }
     
-    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    const { error: refreshError } = await supabase.auth.refreshSession();
     
     if (refreshError) {
       console.warn('[Middleware] Session refresh warning:', refreshError.message);

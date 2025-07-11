@@ -259,7 +259,7 @@ export default function AuthCallback() {
         timeoutRef.current = null;
       }
     };
-  }, []);
+  }, [processAuth]);
 
   // Render based on state
   return (

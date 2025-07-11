@@ -86,7 +86,7 @@ export interface AuthStatus {
  * @param message - The message to log
  * @param data - Optional data to include in the log
  */
-function debugLog(message: string, data?: any): void {
+function debugLog(message: string, data?: unknown): void {
   if (DEBUG) {
     // [Supabase Auth] ${message} ${data || ''}
   }
@@ -105,13 +105,13 @@ function isClientReady(): boolean {
  * @param error - The error object from Supabase
  * @returns {string} User-friendly error message
  */
-export function handleAuthError(error: any): string {
+export function handleAuthError(error: unknown): string {
   if (!error) return 'An unknown error occurred';
   
   debugLog('Auth error occurred:', error);
   
   // Handle specific Supabase auth errors
-  if (error.message) {
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
     const message = error.message.toLowerCase();
     
     if (message.includes('invalid login credentials')) {
@@ -141,23 +141,30 @@ export function handleAuthError(error: any): string {
   }
   
   // Fallback error messages
-  if (error.status === 400) {
-    return 'Invalid request. Please check your information and try again.';
-  }
-  if (error.status === 401) {
-    return 'Authentication failed. Please sign in again.';
-  }
-  if (error.status === 403) {
-    return 'Access denied. You don\'t have permission to perform this action.';
-  }
-  if (error.status === 404) {
-    return 'Resource not found. Please check your request and try again.';
-  }
-  if (error.status >= 500) {
-    return 'Server error. Please try again later.';
+  if (error && typeof error === 'object' && 'status' in error) {
+    const status = error.status;
+    if (status === 400) {
+      return 'Invalid request. Please check your information and try again.';
+    }
+    if (status === 401) {
+      return 'Authentication failed. Please sign in again.';
+    }
+    if (status === 403) {
+      return 'Access denied. You don\'t have permission to perform this action.';
+    }
+    if (status === 404) {
+      return 'Resource not found. Please check your request and try again.';
+    }
+    if (typeof status === 'number' && status >= 500) {
+      return 'Server error. Please try again later.';
+    }
   }
   
-  return error.message || 'An unexpected error occurred. Please try again.';
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+  
+  return 'An unexpected error occurred. Please try again.';
 }
 
 /**
@@ -172,18 +179,20 @@ async function withRetry<T>(
   maxRetries: number = 3,
   baseDelay: number = 1000
 ): Promise<T> {
-  let lastError: any;
+  let lastError: unknown;
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await operation();
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error;
       
       // Don't retry on client errors (4xx) except for network issues
-      if (error.status && error.status >= 400 && error.status < 500) {
-        if (!error.message?.toLowerCase().includes('network')) {
-          throw error;
+      if (error && typeof error === 'object' && 'status' in error && typeof error.status === 'number') {
+        if (error.status >= 400 && error.status < 500) {
+          if (!(error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' && error.message.toLowerCase().includes('network'))) {
+            throw error;
+          }
         }
       }
       
@@ -272,7 +281,7 @@ export async function checkAuthStatus(): Promise<AuthStatus> {
       session: sessionResult.session,
     };
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     debugLog('Unexpected error in checkAuthStatus:', error);
     return {
       isAuthenticated: false,
@@ -373,7 +382,7 @@ export async function getCurrentUser(): Promise<User | null> {
     debugLog(`Current user: ${data.user ? data.user.email : 'None'}`);
     return data.user;
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     debugLog('Unexpected error in getCurrentUser:', error);
     return null;
   }
@@ -420,7 +429,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     debugLog('User profile retrieved successfully');
     return data;
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     debugLog('Unexpected error in getUserProfile:', error);
     return null;
   }
@@ -475,7 +484,7 @@ export async function upsertUserProfile(profile: Omit<UserProfile, 'id' | 'creat
     debugLog('User profile upserted successfully');
     return data;
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     debugLog('Unexpected error in upsertUserProfile:', error);
     return null;
   }
@@ -526,7 +535,7 @@ export async function signOut(): Promise<void> {
     
     debugLog('User signed out successfully');
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     debugLog('Unexpected error in signOut:', error);
     throw error;
   }

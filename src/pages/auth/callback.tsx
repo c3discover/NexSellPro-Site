@@ -19,7 +19,7 @@
  * - error: Auth failed, showing error before redirect
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
 import Head from 'next/head';
@@ -186,7 +186,7 @@ export default function AuthCallback() {
   };
 
   // Main auth processing logic
-  const processAuth = async () => {
+  const processAuth = useCallback(async () => {
     const { type, hasError, errorMessage } = parseUrlParams();
     setAuthType(type);
 
@@ -245,7 +245,7 @@ export default function AuthCallback() {
     };
 
     await attemptSessionEstablishment();
-  };
+  }, []);
 
   useEffect(() => {
     // Component mounted, starting auth processing

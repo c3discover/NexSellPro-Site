@@ -1,7 +1,38 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
+
+/**
+ * Login Flow and States Documentation:
+ * 
+ * This component handles user authentication with the following flow:
+ * 1. User enters email/password
+ * 2. Form validation occurs (client-side)
+ * 3. Credentials are sent to Supabase for verification
+ * 4. Based on response, user is either:
+ *    - Redirected to dashboard (success)
+ *    - Shown specific error message (failure)
+ *    - Prompted to confirm email (if not confirmed)
+ * 
+ * Possible States:
+ * - idle: Initial state, form ready for input
+ * - validating: Client-side validation in progress
+ * - checking: Credentials being verified with Supabase
+ * - logging: User authenticated, creating session and redirecting
+ * - error: Various error states with specific messages
+ * - emailNotConfirmed: User needs to confirm email address
+ * - tooManyAttempts: Rate limiting applied, user must wait
+ * - networkError: Connection issues, user should retry
+ * 
+ * Error Handling:
+ * - Email not confirmed: Shows resend confirmation option
+ * - Invalid credentials: Generic message for security
+ * - Too many attempts: Rate limiting message
+ * - Network errors: Connection issue message
+ * - Unexpected errors: Generic fallback message
+ */
 
 // TypeScript types for form data and errors
 interface LoginForm {
@@ -14,6 +45,9 @@ interface FormError {
   password?: string;
   general?: string;
 }
+
+// Loading state types for better UX
+type LoadingState = 'idle' | 'validating' | 'checking' | 'logging' | 'resending';
 
 const initialForm: LoginForm = { email: '', password: '' };
 
@@ -60,18 +94,28 @@ class LoginErrorBoundary extends React.Component<
 }
 
 export default function LoginPage() {
+  const router = useRouter();
   const [form, setForm] = useState<LoginForm>(initialForm);
   const [errors, setErrors] = useState<FormError>({});
-  const [loading, setLoading] = useState(false);
+  const [loadingState, setLoadingState] = useState<LoadingState>('idle');
   const [showPassword, setShowPassword] = useState(false);
+  const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
 
-  // Clear errors when user starts typing
+  /**
+   * Handles input changes and clears related errors
+   * @param e - Input change event
+   */
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
     setErrors((prev) => ({ ...prev, [e.target.name]: undefined, general: undefined }));
+    setEmailNotConfirmed(false); // Clear email confirmation state when user types
   }
 
-  // Validate form fields
+  /**
+   * Validates form fields and returns validation errors
+   * @param values - Form data to validate
+   * @returns Object containing validation errors
+   */
   function validate(values: LoginForm): FormError {
     const errs: FormError = {};
     if (!values.email) {
@@ -87,24 +131,73 @@ export default function LoginPage() {
     return errs;
   }
 
-  // Handle form submit with proper error handling
+  /**
+   * Resends email confirmation to the user
+   * @param email - Email address to send confirmation to
+   */
+  async function handleResendConfirmation(email: string) {
+    try {
+      setLoadingState('resending');
+      setErrors({});
+
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+      });
+
+      if (error) {
+        console.error("Resend confirmation failed:", error);
+        setErrors({ 
+          general: error.message.includes('Too many requests') 
+            ? 'Too many resend attempts. Please wait a moment before trying again.'
+            : 'Failed to resend confirmation email. Please try again.'
+        });
+      } else {
+        setErrors({ 
+          general: 'Confirmation email sent! Please check your inbox and click the confirmation link.'
+        });
+        setEmailNotConfirmed(false);
+      }
+    } catch (error) {
+      console.error("Unexpected error during resend:", error);
+      setErrors({
+        general: "Failed to resend confirmation email. Please check your connection and try again."
+      });
+    } finally {
+      setLoadingState('idle');
+    }
+  }
+
+  /**
+   * Handles form submission with comprehensive error handling and loading states
+   * @param e - Form submit or button click event
+   */
   async function handleSubmit(e: React.FormEvent | React.MouseEvent) {
-    // Prevent default form submission
+    // Prevent default form submission and multiple submissions
     if (e.type === 'submit') {
       e.preventDefault();
     }
 
+    // Prevent multiple submissions
+    if (loadingState !== 'idle') {
+      return;
+    }
+
     try {
       setErrors({});
+      setEmailNotConfirmed(false);
+      
+      // Client-side validation
+      setLoadingState('validating');
       const validation = validate(form);
       if (Object.keys(validation).length > 0) {
         setErrors(validation);
+        setLoadingState('idle');
         return;
       }
 
-      setLoading(true);
-      setErrors({});
-
+      // Check credentials with Supabase
+      setLoadingState('checking');
       const { data, error } = await supabase.auth.signInWithPassword({
         email: form.email,
         password: form.password,
@@ -113,25 +206,41 @@ export default function LoginPage() {
       if (error) {
         console.error("Login failed:", error.message);
         
-        // Provide more user-friendly error messages
-        let userFriendlyError = error.message;
-        
-        if (error.message.includes('Invalid login credentials')) {
-          userFriendlyError = 'Invalid email or password. Please check your credentials and try again.';
-        } else if (error.message.includes('Email not confirmed')) {
-          userFriendlyError = 'Please check your email and click the confirmation link before signing in.';
+        // Handle specific error cases
+        if (error.message.includes('Email not confirmed')) {
+          setEmailNotConfirmed(true);
+          setErrors({ 
+            general: 'Please confirm your email address before signing in. Check your inbox for a confirmation link.'
+          });
+        } else if (error.message.includes('Invalid login credentials')) {
+          setErrors({ 
+            general: 'Invalid email or password. Please check your credentials and try again.'
+          });
         } else if (error.message.includes('Too many requests')) {
-          userFriendlyError = 'Too many login attempts. Please wait a moment before trying again.';
+          setErrors({ 
+            general: 'Too many login attempts. Please wait a few minutes before trying again.'
+          });
+        } else if (error.message.includes('Network') || error.message.includes('fetch')) {
+          setErrors({ 
+            general: 'Network error. Please check your connection and try again.'
+          });
+        } else {
+          // Generic error for unexpected cases
+          setErrors({ 
+            general: 'An error occurred during login. Please try again.'
+          });
         }
         
-        setErrors({ general: userFriendlyError });
-        setLoading(false);
+        setLoadingState('idle');
         return;
       }
 
       if (data.user && data.session) {
-        // Force refresh the session to ensure it's properly synced
+        // Success - create session and redirect
+        setLoadingState('logging');
+        
         try {
+          // Force refresh the session to ensure it's properly synced
           const { error: refreshError } = await supabase.auth.getUser();
           
           if (refreshError) {
@@ -144,29 +253,50 @@ export default function LoginPage() {
         // Small delay to ensure session is set
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Continue with redirect logic...
-        const urlParams = new URLSearchParams(window.location.search);
-        const redirectTo = urlParams.get('redirect');
-        
-        if (redirectTo && redirectTo.includes('dashboard')) {
-          const url = new URL(decodeURIComponent(redirectTo));
-          window.location.href = url.pathname;
-        } else {
+        // Handle redirect logic
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const redirectTo = urlParams.get('redirect');
+          
+          let targetPath = '/dashboard';
+          
+          if (redirectTo) {
+            try {
+              const decodedRedirect = decodeURIComponent(redirectTo);
+              const url = new URL(decodedRedirect, window.location.origin);
+              
+              // Only allow redirects to internal paths for security
+              if (url.origin === window.location.origin && url.pathname.startsWith('/')) {
+                targetPath = url.pathname + url.search;
+              }
+            } catch (urlError) {
+              console.error("Invalid redirect URL:", urlError);
+              // Fall back to dashboard if redirect URL is invalid
+            }
+          }
+          
+          // Use router.push for client-side navigation
+          await router.push(targetPath);
+        } catch (routerError) {
+          console.error("Router navigation failed:", routerError);
+          // Fallback to window.location if router fails
           window.location.href = '/dashboard';
         }
       } else {
         console.error("Login succeeded but no session data!");
-        setErrors({ general: "Login succeeded but session was not created. Please try again." });
-        setLoading(false);
+        setErrors({ 
+          general: "Login succeeded but session was not created. Please try again."
+        });
+        setLoadingState('idle');
       }
     } catch (error) {
       console.error("Unexpected error during login:", error);
       setErrors({
         general: error instanceof Error
-          ? error.message
+          ? "An unexpected error occurred. Please check your connection and try again."
           : "An unexpected error occurred. Please try again."
       });
-      setLoading(false);
+      setLoadingState('idle');
     }
   }
 
@@ -174,6 +304,20 @@ export default function LoginPage() {
   React.useEffect(() => {
     // Authentication check handled by middleware
   }, []);
+
+  // Helper function to get loading text based on state
+  const getLoadingText = () => {
+    switch (loadingState) {
+      case 'validating': return 'Validating...';
+      case 'checking': return 'Checking credentials...';
+      case 'logging': return 'Logging you in...';
+      case 'resending': return 'Sending confirmation...';
+      default: return 'Sign In';
+    }
+  };
+
+  // Check if form is in any loading state
+  const isLoading = loadingState !== 'idle';
 
   return (
     <LoginErrorBoundary>
@@ -195,7 +339,7 @@ export default function LoginPage() {
                 className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.email ? 'border-red-500' : ''}`}
                 value={form.email}
                 onChange={handleChange}
-                disabled={loading}
+                disabled={isLoading}
                 required
                 placeholder="Enter your email"
               />
@@ -212,7 +356,7 @@ export default function LoginPage() {
                   className={`w-full px-4 py-3 pr-12 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.password ? 'border-red-500' : ''}`}
                   value={form.password}
                   onChange={handleChange}
-                  disabled={loading}
+                  disabled={isLoading}
                   required
                   placeholder="Enter your password"
                 />
@@ -220,7 +364,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors z-20"
-                  disabled={loading}
+                  disabled={isLoading}
                 >
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -245,21 +389,31 @@ export default function LoginPage() {
             {errors.general && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
                 <p className="text-red-400 text-sm text-center">{errors.general}</p>
+                {emailNotConfirmed && (
+                  <button
+                    type="button"
+                    onClick={() => handleResendConfirmation(form.email)}
+                    disabled={loadingState === 'resending'}
+                    className="mt-2 w-full text-sm text-accent hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loadingState === 'resending' ? 'Sending...' : 'Resend confirmation email'}
+                  </button>
+                )}
               </div>
             )}
             <button
               type="button"
               onClick={handleSubmit}
               className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-              disabled={loading}
+              disabled={isLoading}
             >
-              {loading && (
+              {isLoading && (
                 <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
                 </svg>
               )}
-              {loading ? 'Signing in...' : 'Sign In'}
+              {getLoadingText()}
             </button>
           </form>
           <div className="my-6 flex items-center justify-center">

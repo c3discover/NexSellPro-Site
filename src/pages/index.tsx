@@ -224,9 +224,9 @@ function FeaturesSection() {
           <div className="flex items-start">
             <span className="text-blue-600 text-xl mr-3">✓</span>
             <div>
-              <h3 className="font-semibold mb-1 text-gray-900">Sales Volume Estimator</h3>
+              <h3 className="font-semibold mb-1 text-gray-900">Buy Gauge</h3>
               <p className="text-gray-700 text-sm">
-                Monthly sales estimates based on ranking data
+                Product buyability based on your baseline metrics
               </p>
             </div>
           </div>
@@ -254,9 +254,9 @@ function FeaturesSection() {
           <div className="flex items-start">
             <span className="text-blue-600 text-xl mr-3">✓</span>
             <div>
-              <h3 className="font-semibold mb-1 text-gray-900">Works on Any Walmart Page</h3>
+              <h3 className="font-semibold mb-1 text-gray-900">Works on Any Walmart Product Page</h3>
               <p className="text-gray-700 text-sm">
-                Search results, category pages, individual products
+                No limits, no restrictions
               </p>
             </div>
           </div>

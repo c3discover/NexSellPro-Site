@@ -1,123 +1,239 @@
-// src/pages/auth/callback.tsx
-import { useEffect, useState } from 'react';
+/**
+ * Auth Callback Handler
+ * 
+ * This component handles all authentication flows from Supabase:
+ * - Email confirmation (signup)
+ * - Password reset
+ * - Magic link login
+ * 
+ * Flow:
+ * 1. Parse URL parameters to determine auth type
+ * 2. Check for errors in URL
+ * 3. Handle session establishment with retry logic
+ * 4. Redirect based on auth type and session status
+ * 5. Fallback to login if anything fails
+ * 
+ * State Machine:
+ * - processing: Initial state, handling auth
+ * - confirmed: Auth successful, redirecting
+ * - error: Auth failed, showing error before redirect
+ */
+
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
 import Head from 'next/head';
 
+type AuthState = 'processing' | 'confirmed' | 'error';
+type AuthType = 'signup' | 'recovery' | 'magic_link' | 'unknown';
+
 export default function AuthCallback() {
   const router = useRouter();
+  const [state, setState] = useState<AuthState>('processing');
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authType, setAuthType] = useState<AuthType>('unknown');
+  
+  // Refs for cleanup and timeout management
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
+  const maxWaitTime = 10000; // 10 seconds
 
-  useEffect(() => {
-    const handleCallback = async () => {
-      try {
-        // First, check if there's an error in the URL
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const queryParams = new URLSearchParams(window.location.search);
+  // Parse URL parameters to determine auth type and check for errors
+  const parseUrlParams = (): { type: AuthType; hasError: boolean; errorMessage: string | null } => {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const queryParams = new URLSearchParams(window.location.search);
+    
+    // Check for errors first
+    const errorParam = hashParams.get('error') || queryParams.get('error');
+    const errorDescription = hashParams.get('error_description') || queryParams.get('error_description');
+    
+    if (errorParam) {
+      console.error('[Auth Callback] Error detected:', errorParam, errorDescription);
+      return {
+        type: 'unknown',
+        hasError: true,
+        errorMessage: errorDescription || 'Authentication failed'
+      };
+    }
+
+    // Determine auth type
+    const type = hashParams.get('type') || queryParams.get('type');
+    let authType: AuthType = 'unknown';
+    
+    if (type === 'signup' || type === 'email') {
+      authType = 'signup';
+    } else if (type === 'recovery') {
+      authType = 'recovery';
+    } else if (type === 'magic_link') {
+      authType = 'magic_link';
+    }
+
+    // Auth type detected: ${authType}
+    return { type: authType, hasError: false, errorMessage: null };
+  };
+
+  // Attempt to get or establish session
+  const establishSession = async (): Promise<boolean> => {
+    try {
+      // Attempting to establish session...
+      
+      // First, try to get existing session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('[Auth Callback] Session error:', sessionError);
+        return false;
+      }
+
+      if (session) {
+        // Session found: ${session.user.email}
+        return true;
+      }
+
+      // No session found, try to refresh
+      // No session found, attempting refresh...
+      const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError) {
+        console.error('[Auth Callback] Refresh error:', refreshError);
+        return false;
+      }
+
+      if (newSession) {
+        // Session refreshed successfully
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('[Auth Callback] Session establishment error:', error);
+      return false;
+    }
+  };
+
+  // Handle successful authentication
+  const handleSuccess = (type: AuthType) => {
+    // Authentication successful for type: ${type}
+    setState('confirmed');
+    
+    // Redirect based on auth type
+    switch (type) {
+      case 'signup':
+        router.replace('/dashboard');
+        break;
+      case 'recovery':
+        router.replace('/reset-password');
+        break;
+      case 'magic_link':
+        router.replace('/dashboard');
+        break;
+      default:
+        router.replace('/dashboard');
+    }
+  };
+
+  // Handle authentication failure
+  const handleError = (message: string, type: AuthType) => {
+    console.error('[Auth Callback] Authentication failed:', message);
+    setError(message);
+    setState('error');
+    
+    // Redirect based on auth type
+    setTimeout(() => {
+      switch (type) {
+        case 'signup':
+          router.push('/login');
+          break;
+        case 'recovery':
+          router.push('/reset-password-request');
+          break;
+        case 'magic_link':
+          router.push('/login');
+          break;
+        default:
+          router.push('/login');
+      }
+    }, 3000);
+  };
+
+  // Main auth processing logic
+  const processAuth = async () => {
+    const { type, hasError, errorMessage } = parseUrlParams();
+    setAuthType(type);
+
+    if (hasError) {
+      handleError(errorMessage!, type);
+      return;
+    }
+
+    // Set up maximum wait time
+    timeoutRef.current = setTimeout(() => {
+      console.warn('[Auth Callback] Maximum wait time reached');
+      handleError('Authentication timeout. Please try again.', type);
+    }, maxWaitTime);
+
+    // Retry logic for session establishment
+    const attemptSessionEstablishment = async (): Promise<void> => {
+      const hasSession = await establishSession();
+      
+      if (hasSession) {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+        handleSuccess(type);
+        return;
+      }
+
+      retryCountRef.current++;
+      
+      if (retryCountRef.current < maxRetries) {
+        // Retry attempt ${retryCountRef.current}/${maxRetries}
+        // Wait 1 second before retry
+        setTimeout(attemptSessionEstablishment, 1000);
+      } else {
+        console.error('[Auth Callback] Max retries reached');
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
         
-        // Check for errors in both hash and query params
-        const errorParam = hashParams.get('error') || queryParams.get('error');
-        const errorDescription = hashParams.get('error_description') || queryParams.get('error_description');
-
-        if (errorParam) {
-          console.error('Auth error from URL:', errorParam, errorDescription);
-          setError(errorDescription || 'Authentication failed');
-          setLoading(false);
-          setTimeout(() => router.push('/login'), 3000);
-          return;
+        // Handle based on auth type
+        switch (type) {
+          case 'signup':
+            handleError('Email confirmed but could not log you in. Please log in manually.', type);
+            break;
+          case 'recovery':
+            handleError('Invalid or expired reset link', type);
+            break;
+          case 'magic_link':
+            handleError('Magic link expired or invalid', type);
+            break;
+          default:
+            handleError('Authentication failed. Please try again.', type);
         }
-
-        // Get the access token from the URL
-        const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
-        const type = hashParams.get('type') || queryParams.get('type');
-
-        console.log('Callback type:', type);
-        console.log('Has access token:', !!accessToken);
-
-        if (type === 'signup' || type === 'email') {
-          // This is an email confirmation
-          console.log('Processing email confirmation...');
-          
-          // The session should already be set by Supabase from the URL
-          // Let's get the current session
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          
-          if (sessionError) {
-            console.error('Session error:', sessionError);
-            setError('Failed to confirm email. Please try again.');
-            setLoading(false);
-            setTimeout(() => router.push('/login'), 3000);
-            return;
-          }
-
-          if (session) {
-            console.log('Email confirmed, user logged in:', session.user.email);
-            
-            // Give Supabase a moment to fully establish the session
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Redirect to dashboard
-            router.replace('/dashboard');
-          } else {
-            // No session but we have an access token - try to get the session
-            if (accessToken) {
-              console.log('No session found, but have access token. Refreshing...');
-              
-              // Force a session refresh
-              const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
-              
-              if (newSession) {
-                console.log('Session refreshed successfully');
-                router.replace('/dashboard');
-              } else {
-                console.error('Could not establish session:', refreshError);
-                setError('Email confirmed but could not log you in. Please log in manually.');
-                setLoading(false);
-                setTimeout(() => router.push('/login'), 3000);
-              }
-            } else {
-              setError('Email confirmed. Please log in to continue.');
-              setLoading(false);
-              setTimeout(() => router.push('/login'), 3000);
-            }
-          }
-        } else if (type === 'recovery') {
-          // This is a password reset
-          console.log('Processing password reset...');
-          
-          // For password reset, we should have a session
-          const { data: { session } } = await supabase.auth.getSession();
-          
-          if (session) {
-            // Redirect to reset password page
-            router.replace('/reset-password');
-          } else {
-            setError('Invalid or expired reset link');
-            setLoading(false);
-            setTimeout(() => router.push('/reset-password-request'), 3000);
-          }
-        } else {
-          // Unknown type or just a regular auth callback
-          const { data: { session } } = await supabase.auth.getSession();
-          
-          if (session) {
-            router.replace('/dashboard');
-          } else {
-            router.replace('/login');
-          }
-        }
-      } catch (error) {
-        console.error('Callback error:', error);
-        setError('An unexpected error occurred');
-        setLoading(false);
-        setTimeout(() => router.push('/login'), 3000);
       }
     };
 
-    handleCallback();
-  }, [router]);
+    await attemptSessionEstablishment();
+  };
 
+  useEffect(() => {
+    // Component mounted, starting auth processing
+    processAuth();
+
+    // Cleanup function
+    return () => {
+      // Component unmounting, cleaning up
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  // Render based on state
   return (
     <>
       <Head>
@@ -125,18 +241,31 @@ export default function AuthCallback() {
       </Head>
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 px-4">
         <div className="card max-w-md w-full mx-auto p-8 md:p-10 glass animate-fadeIn shadow-xl text-center">
-          {loading && !error && (
+          {state === 'processing' && (
             <>
               <svg className="animate-spin h-12 w-12 text-accent mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
               </svg>
               <h1 className="text-2xl font-bold mb-2 gradient-text">Processing...</h1>
-              <p className="text-gray-400">Please wait while we confirm your account.</p>
+              <p className="text-gray-400">
+                {authType === 'signup' && 'Confirming your email address...'}
+                {authType === 'recovery' && 'Processing password reset...'}
+                {authType === 'magic_link' && 'Logging you in...'}
+                {authType === 'unknown' && 'Processing authentication...'}
+              </p>
             </>
           )}
           
-          {error && (
+          {state === 'confirmed' && (
+            <>
+              <div className="text-4xl mb-4">✅</div>
+              <h1 className="text-2xl font-bold mb-2 text-green-400">Success!</h1>
+              <p className="text-gray-400">Redirecting you to your dashboard...</p>
+            </>
+          )}
+          
+          {state === 'error' && (
             <>
               <div className="text-4xl mb-4">⚠️</div>
               <h1 className="text-2xl font-bold mb-2 text-yellow-400">Action Required</h1>

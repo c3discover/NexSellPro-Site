@@ -121,7 +121,7 @@ export default function AuthCallback() {
   };
 
   // Handle successful authentication
-  const handleSuccess = async (type: AuthType) => {
+  const handleSuccess = useCallback(async (type: AuthType) => {
     // Authentication successful for type: ${type}
     setState('confirmed');
     
@@ -153,10 +153,10 @@ export default function AuthCallback() {
       // Add a call to router.reload() as a fallback if router.replace fails
       router.reload();
     }
-  };
+  }, [router]);
 
   // Handle authentication failure
-  const handleError = (message: string, type: AuthType) => {
+  const handleError = useCallback((message: string, type: AuthType) => {
     console.error('[Auth Callback] Authentication failed:', message);
     setError(message);
     setState('error');
@@ -183,7 +183,7 @@ export default function AuthCallback() {
         router.reload();
       }
     }, 3000);
-  };
+  }, [router]);
 
   // Main auth processing logic
   const processAuth = useCallback(async () => {
@@ -245,7 +245,7 @@ export default function AuthCallback() {
     };
 
     await attemptSessionEstablishment();
-  }, []);
+  }, [handleError, handleSuccess]);
 
   useEffect(() => {
     // Component mounted, starting auth processing

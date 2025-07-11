@@ -271,14 +271,14 @@ export async function checkAuthStatus(): Promise<AuthStatus> {
       };
     }
     
-    const isAuthenticated = !!(userResult.user && sessionResult.session);
+    const isAuthenticated = !!(userResult.data.user && sessionResult.data.session);
     
     debugLog(`Auth status: ${isAuthenticated ? 'Authenticated' : 'Not authenticated'}`);
     
     return {
       isAuthenticated,
-      user: userResult.user,
-      session: sessionResult.session,
+      user: userResult.data.user,
+      session: sessionResult.data.session,
     };
     
   } catch (error: unknown) {

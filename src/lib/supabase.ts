@@ -317,7 +317,7 @@ export async function waitForSession(maxWaitTime: number = 10000): Promise<Sessi
   return new Promise((resolve) => {
     const checkSession = async () => {
       try {
-        const { data: session, error } = await supabase.auth.getSession();
+        const { data, error } = await supabase.auth.getSession();
         
         if (error) {
           debugLog('Error getting session during wait:', error);
@@ -325,9 +325,9 @@ export async function waitForSession(maxWaitTime: number = 10000): Promise<Sessi
           return;
         }
         
-        if (session) {
+        if (data.session) {
           debugLog('Session found during wait');
-          resolve(session);
+          resolve(data.session);
           return;
         }
         

@@ -240,18 +240,13 @@ export default function LoginPage() {
         setLoadingState('logging');
         
         try {
-          // Force refresh the session to ensure it's properly synced
-          const { error: refreshError } = await supabase.auth.getUser();
-          
-          if (refreshError) {
-            console.error("Error refreshing user:", refreshError);
-          }
+          // Ensure session is fully established
+          await supabase.auth.refreshSession();
+          // Give cookies time to propagate
+          await new Promise(resolve => setTimeout(resolve, 1000));
         } catch (err) {
           console.error("Session refresh failed:", err);
         }
-        
-        // Small delay to ensure session is set
-        await new Promise(resolve => setTimeout(resolve, 500));
         
         // Handle redirect logic
         try {
@@ -280,7 +275,13 @@ export default function LoginPage() {
         } catch (routerError) {
           console.error("Router navigation failed:", routerError);
           // Fallback to window.location if router fails
-          window.location.href = '/dashboard';
+          try {
+            window.location.href = '/dashboard';
+          } catch (locationError) {
+            console.error("Window location redirect failed:", locationError);
+            // Final fallback - reload the page
+            window.location.reload();
+          }
         }
       } else {
         console.error("Login succeeded but no session data!");

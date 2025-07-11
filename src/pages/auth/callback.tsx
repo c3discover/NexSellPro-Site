@@ -88,6 +88,10 @@ export default function AuthCallback() {
 
       if (session) {
         // Session found: ${session.user.email}
+        // Force cookie update
+        await supabase.auth.refreshSession();
+        // Small delay to ensure cookies are written
+        await new Promise(resolve => setTimeout(resolve, 100));
         return true;
       }
 
@@ -102,6 +106,10 @@ export default function AuthCallback() {
 
       if (newSession) {
         // Session refreshed successfully
+        // Force cookie update
+        await supabase.auth.refreshSession();
+        // Small delay to ensure cookies are written
+        await new Promise(resolve => setTimeout(resolve, 100));
         return true;
       }
 
@@ -113,23 +121,37 @@ export default function AuthCallback() {
   };
 
   // Handle successful authentication
-  const handleSuccess = (type: AuthType) => {
+  const handleSuccess = async (type: AuthType) => {
     // Authentication successful for type: ${type}
     setState('confirmed');
     
+    // After successful auth, add a call to refreshSession() before redirecting
+    try {
+      await supabase.auth.refreshSession();
+    } catch (error) {
+      console.warn('[Auth Callback] Refresh session before redirect failed:', error);
+    }
+    
     // Redirect based on auth type
-    switch (type) {
-      case 'signup':
-        router.replace('/dashboard');
-        break;
-      case 'recovery':
-        router.replace('/reset-password');
-        break;
-      case 'magic_link':
-        router.replace('/dashboard');
-        break;
-      default:
-        router.replace('/dashboard');
+    const redirectPath = (() => {
+      switch (type) {
+        case 'signup':
+          return '/dashboard';
+        case 'recovery':
+          return '/reset-password';
+        case 'magic_link':
+          return '/dashboard';
+        default:
+          return '/dashboard';
+      }
+    })();
+
+    try {
+      await router.replace(redirectPath);
+    } catch (error) {
+      console.warn('[Auth Callback] Router replace failed, trying reload:', error);
+      // Add a call to router.reload() as a fallback if router.replace fails
+      router.reload();
     }
   };
 
@@ -140,19 +162,25 @@ export default function AuthCallback() {
     setState('error');
     
     // Redirect based on auth type
-    setTimeout(() => {
-      switch (type) {
-        case 'signup':
-          router.push('/login');
-          break;
-        case 'recovery':
-          router.push('/reset-password-request');
-          break;
-        case 'magic_link':
-          router.push('/login');
-          break;
-        default:
-          router.push('/login');
+    setTimeout(async () => {
+      const redirectPath = (() => {
+        switch (type) {
+          case 'signup':
+            return '/login';
+          case 'recovery':
+            return '/reset-password-request';
+          case 'magic_link':
+            return '/login';
+          default:
+            return '/login';
+        }
+      })();
+
+      try {
+        await router.push(redirectPath);
+      } catch (error) {
+        console.warn('[Auth Callback] Router push failed, trying reload:', error);
+        router.reload();
       }
     }, 3000);
   };
@@ -190,8 +218,8 @@ export default function AuthCallback() {
       
       if (retryCountRef.current < maxRetries) {
         // Retry attempt ${retryCountRef.current}/${maxRetries}
-        // Wait 1 second before retry
-        setTimeout(attemptSessionEstablishment, 1000);
+        // Increase the wait time between retries to 2 seconds
+        setTimeout(attemptSessionEstablishment, 2000);
       } else {
         console.error('[Auth Callback] Max retries reached');
         if (timeoutRef.current) {

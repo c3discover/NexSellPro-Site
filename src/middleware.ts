@@ -27,7 +27,7 @@ export async function middleware(request: NextRequest) {
 
   // Debug logging in development
   if (isDevelopment) {
-    // Processing route: ${pathname}
+    console.log(`[Middleware] Processing route: ${pathname}`);
   }
 
   // Create a response object to handle cookies
@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
   // If it's a public route, allow access without auth check
   if (isPublicRoute) {
     if (isDevelopment) {
-      // Public route detected: ${pathname} - allowing access
+      console.log(`[Middleware] Public route detected: ${pathname} - allowing access`);
     }
     return response;
   }
@@ -71,11 +71,35 @@ export async function middleware(request: NextRequest) {
   );
 
   try {
-    // Get session
+    // Refresh session to ensure we have the latest auth state
+    // This is critical for production environments where cookies may be stale
+    if (isDevelopment) {
+      console.log('[Middleware] Refreshing session...');
+    }
+    
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    
+    if (refreshError) {
+      console.warn('[Middleware] Session refresh warning:', refreshError.message);
+      // Continue with existing session even if refresh fails
+    } else if (isDevelopment) {
+      console.log('[Middleware] Session refresh completed');
+    }
+
+    // Add a small delay to ensure cookies are properly set after auth operations
+    // This helps with race conditions in production environments
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // Get session with improved error handling
     const { data: { session }, error } = await supabase.auth.getSession();
 
     if (error) {
-      console.error('[Middleware] Auth error:', error.message);
+      console.error('[Middleware] Auth error during getSession:', error.message);
+      console.error('[Middleware] Error details:', {
+        code: error.status,
+        name: error.name,
+        stack: error.stack
+      });
       // On auth error, allow the request to continue (don't block the site)
       return response;
     }
@@ -83,14 +107,22 @@ export async function middleware(request: NextRequest) {
     const isAuthenticated = !!session;
 
     if (isDevelopment) {
-      // Authentication status: ${isAuthenticated ? 'Authenticated' : 'Not authenticated'}
+      console.log(`[Middleware] Authentication status: ${isAuthenticated ? 'Authenticated' : 'Not authenticated'}`);
+      if (session) {
+        console.log('[Middleware] Session details:', {
+          userId: session.user?.id,
+          email: session.user?.email,
+          expiresAt: session.expires_at,
+          accessTokenExpiry: session.access_token ? 'Present' : 'Missing'
+        });
+      }
     }
 
     // Handle protected routes (dashboard, profile, settings)
     if (pathname.startsWith('/dashboard') || pathname.startsWith('/profile') || pathname.startsWith('/settings')) {
       if (!isAuthenticated) {
         if (isDevelopment) {
-          // Redirecting unauthenticated user from ${pathname} to login
+          console.log(`[Middleware] Redirecting unauthenticated user from ${pathname} to login`);
         }
         const loginUrl = new URL('/login', request.url);
         loginUrl.searchParams.set('redirect', request.url);
@@ -98,7 +130,7 @@ export async function middleware(request: NextRequest) {
       }
       // User is authenticated, allow access to protected route
       if (isDevelopment) {
-        // Authenticated user accessing protected route: ${pathname}
+        console.log(`[Middleware] Authenticated user accessing protected route: ${pathname}`);
       }
       return response;
     }
@@ -114,7 +146,7 @@ export async function middleware(request: NextRequest) {
           // Ensure redirect is to same origin for security
           if (redirectUrl.origin === request.nextUrl.origin) {
             if (isDevelopment) {
-              // Redirecting authenticated user to: ${redirectTo}
+              console.log(`[Middleware] Redirecting authenticated user to: ${redirectTo}`);
             }
             return NextResponse.redirect(redirectUrl);
           }
@@ -122,25 +154,26 @@ export async function middleware(request: NextRequest) {
         
         // Default redirect to dashboard if no valid redirect parameter
         if (isDevelopment) {
-          // Redirecting authenticated user to dashboard
+          console.log('[Middleware] Redirecting authenticated user to dashboard');
         }
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
       // User is not authenticated, allow access to login/signup
       if (isDevelopment) {
-        // Unauthenticated user accessing auth route: ${pathname}
+        console.log(`[Middleware] Unauthenticated user accessing auth route: ${pathname}`);
       }
       return response;
     }
 
     // Allow all other routes (public by default)
     if (isDevelopment) {
-      // Allowing access to public route: ${pathname}
+      console.log(`[Middleware] Allowing access to public route: ${pathname}`);
     }
     return response;
 
   } catch (error) {
     console.error('[Middleware] Unexpected error:', error);
+    console.error('[Middleware] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     // On unexpected error, allow the request to continue (don't block the site)
     return response;
   }

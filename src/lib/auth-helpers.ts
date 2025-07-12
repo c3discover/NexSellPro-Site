@@ -25,6 +25,8 @@ import { supabase } from './supabase';
  * @returns {Promise<Session | null>} The current session after ensuring persistence
  */
 export async function ensureSessionPersistence() {
+  console.log('[Auth Helper] Ensuring session persistence...');
+  
   // Get the current session from Supabase
   const { data: { session } } = await supabase.auth.getSession();
   
@@ -34,11 +36,14 @@ export async function ensureSessionPersistence() {
     // can be delayed due to CDNs, load balancers, or edge functions
     await supabase.auth.refreshSession();
     
+    console.log('[Auth Helper] Session refreshed, waiting for propagation...');
+    
     // Additional delay to allow for cookie propagation across the application
     // This is a conservative approach to handle edge cases in production
     // where immediate cookie availability might not be guaranteed
     await new Promise(resolve => setTimeout(resolve, 500));
   }
   
+  console.log('[Auth Helper] Session persistence complete');
   return session;
 } 

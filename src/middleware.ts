@@ -86,9 +86,9 @@ export async function middleware(request: NextRequest) {
       console.log('[Middleware] Session refresh completed');
     }
 
-    // Add a small delay to ensure cookies are properly set after auth operations
-    // This helps with race conditions in production environments
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // 200ms delay for cookie propagation in production environments
+    // Matches timing strategy in auth-helpers for consistency
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     // Get session with improved error handling
     const { data: { session }, error } = await supabase.auth.getSession();

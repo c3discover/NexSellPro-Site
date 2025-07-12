@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
+import { ensureSessionPersistence } from '@/lib/auth-helpers';
 
 /**
  * Login Flow and States Documentation:
@@ -241,9 +242,7 @@ export default function LoginPage() {
         
         try {
           // Ensure session is fully established
-          await supabase.auth.refreshSession();
-          // Give cookies time to propagate
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await ensureSessionPersistence();
         } catch (err) {
           console.error("Session refresh failed:", err);
         }

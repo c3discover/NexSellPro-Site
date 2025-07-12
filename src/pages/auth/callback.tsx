@@ -22,6 +22,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
+import { ensureSessionPersistence } from '@/lib/auth-helpers';
 import Head from 'next/head';
 
 type AuthState = 'processing' | 'confirmed' | 'error';
@@ -76,44 +77,8 @@ export default function AuthCallback() {
   // Attempt to get or establish session
   const establishSession = async (): Promise<boolean> => {
     try {
-      // Attempting to establish session...
-      
-      // First, try to get existing session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error('[Auth Callback] Session error:', sessionError);
-        return false;
-      }
-
-      if (session) {
-        // Session found: ${session.user.email}
-        // Force cookie update
-        await supabase.auth.refreshSession();
-        // Small delay to ensure cookies are written
-        await new Promise(resolve => setTimeout(resolve, 100));
-        return true;
-      }
-
-      // No session found, try to refresh
-      // No session found, attempting refresh...
-      const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError) {
-        console.error('[Auth Callback] Refresh error:', refreshError);
-        return false;
-      }
-
-      if (newSession) {
-        // Session refreshed successfully
-        // Force cookie update
-        await supabase.auth.refreshSession();
-        // Small delay to ensure cookies are written
-        await new Promise(resolve => setTimeout(resolve, 100));
-        return true;
-      }
-
-      return false;
+      const session = await ensureSessionPersistence();
+      return !!session;
     } catch (error) {
       console.error('[Auth Callback] Session establishment error:', error);
       return false;

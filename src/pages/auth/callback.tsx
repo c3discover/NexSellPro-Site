@@ -77,6 +77,17 @@ export default function AuthCallback() {
   // Attempt to get or establish session
   const establishSession = async (): Promise<boolean> => {
     try {
+      // Check if there's a session
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      console.log('Session exists?', !!currentSession);
+      if (currentSession) {
+        console.log('User:', currentSession.user.email);
+        console.log('Expires:', new Date((currentSession.expires_at || 0) * 1000));
+      }
+
+      // Check cookies
+      console.log('Auth cookies:', document.cookie.split(';').filter(c => c.includes('sb-')));
+
       const session = await ensureSessionPersistence();
       return !!session;
     } catch (error) {
@@ -89,13 +100,6 @@ export default function AuthCallback() {
   const handleSuccess = useCallback(async (type: AuthType) => {
     // Authentication successful for type: ${type}
     setState('confirmed');
-    
-    // After successful auth, add a call to refreshSession() before redirecting
-    try {
-      await supabase.auth.refreshSession();
-    } catch (error) {
-      console.warn('[Auth Callback] Refresh session before redirect failed:', error);
-    }
     
     // Redirect based on auth type
     const redirectPath = (() => {
@@ -159,6 +163,12 @@ export default function AuthCallback() {
       handleError(errorMessage!, type);
       return;
     }
+
+    // CRITICAL: Give Supabase time to process URL tokens
+    // This delay is necessary because detectSessionInUrl happens asynchronously
+    console.log('[Auth Callback] Waiting for Supabase to process URL tokens...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log('[Auth Callback] Starting session establishment...');
 
     // Set up maximum wait time
     timeoutRef.current = setTimeout(() => {

@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
-import { ensureSessionPersistence } from '@/lib/auth-helpers';
 
 /**
  * Login Flow and States Documentation:
@@ -95,7 +93,6 @@ class LoginErrorBoundary extends React.Component<
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const [form, setForm] = useState<LoginForm>(initialForm);
   const [errors, setErrors] = useState<FormError>({});
   const [loadingState, setLoadingState] = useState<LoadingState>('idle');
@@ -185,7 +182,6 @@ export default function LoginPage() {
       return;
     }
 
-    const startTime = Date.now();
     console.log('[Login] Starting login process...', { email: form.email });
 
     try {
@@ -310,7 +306,6 @@ export default function LoginPage() {
     // Check if there was a recent login from localStorage
     const lastLoginTimestamp = localStorage.getItem('lastLoginTimestamp');
     const lastLoginEmail = localStorage.getItem('lastLoginEmail');
-    const sessionExpiresAt = localStorage.getItem('sessionExpiresAt');
     
     if (lastLoginTimestamp && lastLoginEmail) {
       const timeSinceLogin = Date.now() - parseInt(lastLoginTimestamp);

@@ -243,45 +243,13 @@ export default function LoginPage() {
         try {
           // Ensure session is fully established
           await ensureSessionPersistence();
+          console.log('[Login] Session persistence returned, proceeding with redirect...');
         } catch (err) {
           console.error("Session refresh failed:", err);
         }
         
-        // Handle redirect logic
-        try {
-          const urlParams = new URLSearchParams(window.location.search);
-          const redirectTo = urlParams.get('redirect');
-          
-          let targetPath = '/dashboard';
-          
-          if (redirectTo) {
-            try {
-              const decodedRedirect = decodeURIComponent(redirectTo);
-              const url = new URL(decodedRedirect, window.location.origin);
-              
-              // Only allow redirects to internal paths for security
-              if (url.origin === window.location.origin && url.pathname.startsWith('/')) {
-                targetPath = url.pathname + url.search;
-              }
-            } catch (urlError) {
-              console.error("Invalid redirect URL:", urlError);
-              // Fall back to dashboard if redirect URL is invalid
-            }
-          }
-          
-          // Use router.push for client-side navigation
-          await router.push(targetPath);
-        } catch (routerError) {
-          console.error("Router navigation failed:", routerError);
-          // Fallback to window.location if router fails
-          try {
-            window.location.href = '/dashboard';
-          } catch (locationError) {
-            console.error("Window location redirect failed:", locationError);
-            // Final fallback - reload the page
-            window.location.reload();
-          }
-        }
+        // Simple redirect to dashboard
+        window.location.href = '/dashboard';
       } else {
         console.error("Login succeeded but no session data!");
         setErrors({ 

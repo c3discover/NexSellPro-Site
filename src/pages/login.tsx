@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
+import { ensureSessionPersistence } from '@/lib/auth-helpers';
 
 /**
  * Login Flow and States Documentation:
@@ -47,7 +48,7 @@ interface FormError {
 }
 
 // Loading state types for better UX
-type LoadingState = 'idle' | 'validating' | 'checking' | 'logging' | 'resending';
+type LoadingState = 'idle' | 'validating' | 'checking' | 'logging' | 'resending' | 'establishing' | 'redirecting';
 
 const initialForm: LoginForm = { email: '', password: '' };
 
@@ -100,6 +101,7 @@ export default function LoginPage() {
   const [loadingState, setLoadingState] = useState<LoadingState>('idle');
   const [showPassword, setShowPassword] = useState(false);
   const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
+  const [redirectAttempts, setRedirectAttempts] = useState(0);
 
   /**
    * Handles input changes and clears related errors
@@ -169,7 +171,7 @@ export default function LoginPage() {
   }
 
   /**
-   * Handles form submission with comprehensive error handling and loading states
+   * Aggressive session establishment with multiple verification steps and redirect methods
    * @param e - Form submit or button click event
    */
   async function handleSubmit(e: React.FormEvent | React.MouseEvent) {
@@ -180,23 +182,31 @@ export default function LoginPage() {
 
     // Prevent multiple submissions
     if (loadingState !== 'idle') {
+      console.log('[Login] Prevented multiple submission attempts');
       return;
     }
+
+    const startTime = Date.now();
+    console.log('[Login] Starting login process...', { email: form.email });
 
     try {
       setErrors({});
       setEmailNotConfirmed(false);
+      setRedirectAttempts(0);
       
-      // Client-side validation
+      // Step 1: Client-side validation
+      console.log('[Login] Step 1: Client-side validation');
       setLoadingState('validating');
       const validation = validate(form);
       if (Object.keys(validation).length > 0) {
+        console.log('[Login] Validation failed:', validation);
         setErrors(validation);
         setLoadingState('idle');
         return;
       }
 
-      // Check credentials with Supabase
+      // Step 2: Authenticate with Supabase
+      console.log('[Login] Step 2: Authenticating with Supabase');
       setLoadingState('checking');
       const { data, error } = await supabase.auth.signInWithPassword({
         email: form.email,
@@ -204,7 +214,7 @@ export default function LoginPage() {
       });
 
       if (error) {
-        console.error("Login failed:", error.message);
+        console.error('[Login] Authentication failed:', error.message);
         
         // Handle specific error cases
         if (error.message.includes('Email not confirmed')) {
@@ -225,7 +235,6 @@ export default function LoginPage() {
             general: 'Network error. Please check your connection and try again.'
           });
         } else {
-          // Generic error for unexpected cases
           setErrors({ 
             general: 'An error occurred during login. Please try again.'
           });
@@ -235,58 +244,149 @@ export default function LoginPage() {
         return;
       }
 
-      if (data.user && data.session) {
-        // Success - create session and redirect
-        setLoadingState('logging');
-        
-        try {
-          console.log('[Login] Authentication successful, establishing session...');
-          
-          // Wait a moment for session to be properly established
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Verify session exists before redirecting
-          const { data: { session: verifiedSession }, error: sessionError } = await supabase.auth.getSession();
-
-          if (sessionError) {
-            console.error('[Login] Session verification error:', sessionError);
-            setErrors({ 
-              general: "Authentication succeeded but session verification failed. Please try logging in again."
-            });
-            setLoadingState('idle');
-            return;
-          }
-
-          if (!verifiedSession) {
-            console.error('[Login] Session not found after authentication!');
-            setErrors({ 
-              general: "Authentication succeeded but session could not be established. Please try logging in again."
-            });
-            setLoadingState('idle');
-            return;
-          }
-
-          console.log('[Login] Session verified, redirecting to dashboard...');
-          console.log('[Login] User:', verifiedSession.user.email);
-
-          // Use router.replace to avoid history issues
-          await router.replace('/dashboard');
-        } catch (err) {
-          console.error("[Login] Session establishment failed:", err);
-          setErrors({ 
-            general: "Authentication succeeded but redirect failed. Please try refreshing the page."
-          });
-          setLoadingState('idle');
-        }
-      } else {
-        console.error("Login succeeded but no session data!");
+      if (!data.user || !data.session) {
+        console.error('[Login] Authentication succeeded but no session data!');
         setErrors({ 
           general: "Login succeeded but session was not created. Please try again."
         });
         setLoadingState('idle');
+        return;
       }
+
+      console.log('[Login] Authentication successful:', {
+        userId: data.user.id,
+        email: data.user.email,
+        sessionExpiresAt: data.session.expires_at
+      });
+
+      // Step 3: Aggressive session establishment with 3-second total wait time
+      console.log('[Login] Step 3: Aggressive session establishment');
+      setLoadingState('establishing');
+      
+      // Set localStorage flag for page reload scenarios
+      localStorage.setItem('loginInProgress', 'true');
+      localStorage.setItem('loginTimestamp', Date.now().toString());
+      localStorage.setItem('loginEmail', form.email);
+
+      // First session verification (immediate)
+      console.log('[Login] First session verification...');
+      let sessionResult = await ensureSessionPersistence({
+        forceRefresh: true,
+        onError: (error) => console.error('[Login] Session persistence error:', error),
+        onSuccess: (session) => console.log('[Login] Session persistence success:', session.user?.email)
+      });
+
+      if (!sessionResult.success) {
+        console.warn('[Login] First session verification failed, retrying...');
+        
+        // Wait 1 second and try again
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        sessionResult = await ensureSessionPersistence({
+          forceRefresh: true,
+          onError: (error) => console.error('[Login] Second session verification error:', error),
+          onSuccess: (session) => console.log('[Login] Second session verification success:', session.user?.email)
+        });
+      }
+
+      if (!sessionResult.success) {
+        console.warn('[Login] Second session verification failed, final attempt...');
+        
+        // Wait 1 more second and try final time
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        sessionResult = await ensureSessionPersistence({
+          forceRefresh: true,
+          onError: (error) => console.error('[Login] Final session verification error:', error),
+          onSuccess: (session) => console.log('[Login] Final session verification success:', session.user?.email)
+        });
+      }
+
+      // Clear localStorage flags
+      localStorage.removeItem('loginInProgress');
+      localStorage.removeItem('loginTimestamp');
+      localStorage.removeItem('loginEmail');
+
+      if (!sessionResult.success) {
+        console.error('[Login] All session establishment attempts failed');
+        setErrors({ 
+          general: "Authentication succeeded but session establishment failed. Please try refreshing the page."
+        });
+        setLoadingState('idle');
+        return;
+      }
+
+      console.log('[Login] Session establishment successful after', Date.now() - startTime, 'ms');
+
+      // Step 4: Multiple redirect methods as fallbacks
+      console.log('[Login] Step 4: Initiating redirect with multiple fallback methods');
+      setLoadingState('redirecting');
+
+      const redirectToDashboard = async () => {
+        const maxRedirectAttempts = 3;
+        let currentAttempt = 0;
+
+        const attemptRedirect = async (method: string) => {
+          currentAttempt++;
+          console.log(`[Login] Redirect attempt ${currentAttempt}/${maxRedirectAttempts} using ${method}`);
+          
+          try {
+            switch (method) {
+              case 'router':
+                await router.replace('/dashboard');
+                break;
+              case 'location.replace':
+                window.location.replace('/dashboard');
+                break;
+              case 'location.href':
+                window.location.href = '/dashboard';
+                break;
+              case 'reload':
+                window.location.reload();
+                break;
+            }
+            
+            // Wait a bit to see if redirect worked
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // If we're still on the login page, try next method
+            if (window.location.pathname === '/login') {
+              console.warn(`[Login] ${method} redirect failed, trying next method...`);
+              return false;
+            }
+            
+            return true;
+          } catch (error) {
+            console.error(`[Login] ${method} redirect failed:`, error);
+            return false;
+          }
+        };
+
+        // Try router first (most reliable for Next.js)
+        if (!(await attemptRedirect('router'))) {
+          // Try window.location.replace
+          if (!(await attemptRedirect('location.replace'))) {
+            // Try window.location.href
+            if (!(await attemptRedirect('location.href'))) {
+              // Final fallback: page reload
+              console.log('[Login] All redirect methods failed, using page reload as final fallback');
+              await attemptRedirect('reload');
+            }
+          }
+        }
+      };
+
+      // Start redirect process
+      await redirectToDashboard();
+
     } catch (error) {
-      console.error("Unexpected error during login:", error);
+      console.error('[Login] Unexpected error during login:', error);
+      
+      // Clear localStorage flags on error
+      localStorage.removeItem('loginInProgress');
+      localStorage.removeItem('loginTimestamp');
+      localStorage.removeItem('loginEmail');
+      
       setErrors({
         general: error instanceof Error
           ? "An unexpected error occurred. Please check your connection and try again."
@@ -296,10 +396,63 @@ export default function LoginPage() {
     }
   }
 
-  // Let middleware handle authentication checks
+  // Handle page reload scenarios and authentication checks
   React.useEffect(() => {
-    // Authentication check handled by middleware
-  }, []);
+    console.log('[Login] Component mounted, checking for login in progress...');
+    
+    // Check if login was in progress from localStorage
+    const loginInProgress = localStorage.getItem('loginInProgress');
+    const loginTimestamp = localStorage.getItem('loginTimestamp');
+    const loginEmail = localStorage.getItem('loginEmail');
+    
+    if (loginInProgress === 'true' && loginTimestamp && loginEmail) {
+      const timeSinceLogin = Date.now() - parseInt(loginTimestamp);
+      
+      // If login was in progress less than 30 seconds ago, try to complete it
+      if (timeSinceLogin < 30000) {
+        console.log('[Login] Detected login in progress from page reload, attempting to complete...');
+        setForm({ email: loginEmail, password: '' });
+        
+        // Clear the flags
+        localStorage.removeItem('loginInProgress');
+        localStorage.removeItem('loginTimestamp');
+        localStorage.removeItem('loginEmail');
+        
+        // Try to establish session and redirect
+        const completeLogin = async () => {
+          try {
+            setLoadingState('establishing');
+            console.log('[Login] Attempting to complete login after page reload...');
+            
+            const sessionResult = await ensureSessionPersistence({
+              forceRefresh: true,
+              onError: (error) => console.error('[Login] Session completion error:', error),
+              onSuccess: (session) => console.log('[Login] Session completion success:', session.user?.email)
+            });
+            
+            if (sessionResult.success) {
+              console.log('[Login] Login completed successfully after page reload');
+              setLoadingState('redirecting');
+              await router.replace('/dashboard');
+            } else {
+              console.log('[Login] Could not complete login after page reload');
+              setLoadingState('idle');
+            }
+          } catch (error) {
+            console.error('[Login] Error completing login after page reload:', error);
+            setLoadingState('idle');
+          }
+        };
+        
+        completeLogin();
+      } else {
+        // Clear old flags
+        localStorage.removeItem('loginInProgress');
+        localStorage.removeItem('loginTimestamp');
+        localStorage.removeItem('loginEmail');
+      }
+    }
+  }, [router]);
 
   // Helper function to get loading text based on state
   const getLoadingText = () => {
@@ -307,6 +460,8 @@ export default function LoginPage() {
       case 'validating': return 'Validating...';
       case 'checking': return 'Checking credentials...';
       case 'logging': return 'Logging you in...';
+      case 'establishing': return 'Establishing session...';
+      case 'redirecting': return 'Redirecting...';
       case 'resending': return 'Sending confirmation...';
       default: return 'Sign In';
     }
@@ -324,7 +479,7 @@ export default function LoginPage() {
         <div className="card max-w-md w-full mx-auto p-8 md:p-10 glass animate-fadeIn shadow-xl">
           <h1 className="text-3xl font-bold text-center mb-2 gradient-text">Sign in to NexSellPro</h1>
           <p className="text-center text-gray-400 mb-6">Welcome back! Enter your details to continue.</p>
-          <form className="space-y-5">
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <div className="relative">
               <label htmlFor="email" className="block text-sm font-medium text-gray-200 mb-1">Email</label>
               <input
@@ -398,8 +553,7 @@ export default function LoginPage() {
               </div>
             )}
             <button
-              type="button"
-              onClick={handleSubmit}
+              type="submit"
               className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               disabled={isLoading}
             >

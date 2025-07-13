@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
 import { ensureSessionPersistence } from '@/lib/auth-helpers';
 
@@ -94,6 +95,7 @@ class LoginErrorBoundary extends React.Component<
 }
 
 export default function LoginPage() {
+  const router = useRouter();
   const [form, setForm] = useState<LoginForm>(initialForm);
   const [errors, setErrors] = useState<FormError>({});
   const [loadingState, setLoadingState] = useState<LoadingState>('idle');
@@ -239,15 +241,29 @@ export default function LoginPage() {
         setLoadingState('logging');
         
         try {
-          // Ensure session is fully established
+          // Ensure session is properly persisted with cookie propagation
           await ensureSessionPersistence();
           console.log('[Login] Session persistence returned, proceeding with redirect...');
+
+          // CRITICAL: Verify session exists before redirecting
+          const { data: { session: verifiedSession } } = await supabase.auth.getSession();
+
+          if (!verifiedSession) {
+            console.error('[Login] Session not found after persistence!');
+            setErrors({ 
+              general: "Authentication succeeded but session could not be established. Please try logging in again."
+            });
+            setLoadingState('idle');
+            return;
+          }
+
+          console.log('[Login] Session verified, redirecting to dashboard...');
+
+          // Use router.replace to avoid history issues
+          await router.replace('/dashboard');
         } catch (err) {
           console.error("Session refresh failed:", err);
         }
-        
-        // Simple redirect to dashboard
-        window.location.href = '/dashboard';
       } else {
         console.error("Login succeeded but no session data!");
         setErrors({ 

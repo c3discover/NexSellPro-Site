@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
 import { ensureSessionPersistence } from '@/lib/auth-helpers';
 
@@ -95,7 +94,6 @@ class LoginErrorBoundary extends React.Component<
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const [form, setForm] = useState<LoginForm>(initialForm);
   const [errors, setErrors] = useState<FormError>({});
   const [loadingState, setLoadingState] = useState<LoadingState>('idle');

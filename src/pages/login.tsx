@@ -3,7 +3,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
-import { ensureSessionPersistence } from '@/lib/auth-helpers';
 
 /**
  * Login Flow and States Documentation:

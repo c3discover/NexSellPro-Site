@@ -22,7 +22,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
-import { ensureSessionPersistence } from '@/lib/auth-helpers';
 import Head from 'next/head';
 
 type AuthState = 'processing' | 'confirmed' | 'error';

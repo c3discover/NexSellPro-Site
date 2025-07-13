@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               value: value || ''
             }));
           },
-          setAll(cookiesToSet) {
+          setAll(_cookiesToSet) {
             // This is a read-only endpoint, so we don't need to set cookies
           },
         },

@@ -48,7 +48,7 @@ interface FormError {
 }
 
 // Loading state types for better UX
-type LoadingState = 'idle' | 'validating' | 'checking' | 'logging' | 'resending' | 'establishing' | 'redirecting';
+type LoadingState = 'idle' | 'validating' | 'checking' | 'logging' | 'resending' | 'redirecting';
 
 const initialForm: LoginForm = { email: '', password: '' };
 
@@ -170,7 +170,7 @@ export default function LoginPage() {
   }
 
   /**
-   * Aggressive session establishment with multiple verification steps and redirect methods
+   * Simplified login handler with direct authentication and redirect
    * @param e - Form submit or button click event
    */
   async function handleSubmit(e: React.FormEvent | React.MouseEvent) {
@@ -251,139 +251,48 @@ export default function LoginPage() {
         return;
       }
 
+      // Log session details for debugging
       console.log('[Login] Authentication successful:', {
         userId: data.user.id,
         email: data.user.email,
-        sessionExpiresAt: data.session.expires_at
+        sessionExpiresAt: data.session.expires_at,
+        accessTokenPreview: data.session.access_token ? data.session.access_token.substring(0, 20) + '...' : 'Missing',
+        refreshTokenPresent: !!data.session.refresh_token
       });
 
-      // Step 3: Aggressive session establishment with 3-second total wait time
-      console.log('[Login] Step 3: Aggressive session establishment');
-      setLoadingState('establishing');
-      
-      // Set localStorage flag for page reload scenarios
-      localStorage.setItem('loginInProgress', 'true');
-      localStorage.setItem('loginTimestamp', Date.now().toString());
-      localStorage.setItem('loginEmail', form.email);
+      // Step 3: Simple success path - trust Supabase session and redirect
+      console.log('[Login] Step 3: Proceeding with simple redirect');
+      setLoadingState('redirecting');
 
-      // First session verification (immediate)
-      console.log('[Login] First session verification...');
-      let sessionResult = await ensureSessionPersistence({
-        forceRefresh: true,
-        onError: (error) => console.error('[Login] Session persistence error:', error),
-        onSuccess: (session) => console.log('[Login] Session persistence success:', session.user?.email)
-      });
+      // Store session info for debugging
+      localStorage.setItem('lastLoginTimestamp', Date.now().toString());
+      localStorage.setItem('lastLoginEmail', form.email);
+      localStorage.setItem('sessionExpiresAt', data.session.expires_at?.toString() || 'unknown');
 
-      if (!sessionResult.success) {
-        console.warn('[Login] First session verification failed, retrying...');
-        
-        // Wait 1 second and try again
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        sessionResult = await ensureSessionPersistence({
-          forceRefresh: true,
-          onError: (error) => console.error('[Login] Second session verification error:', error),
-          onSuccess: (session) => console.log('[Login] Second session verification success:', session.user?.email)
-        });
-      }
+      // Simple delay then redirect
+      console.log('[Login] Waiting 1 second before redirect...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      if (!sessionResult.success) {
-        console.warn('[Login] Second session verification failed, final attempt...');
-        
-        // Wait 1 more second and try final time
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        sessionResult = await ensureSessionPersistence({
-          forceRefresh: true,
-          onError: (error) => console.error('[Login] Final session verification error:', error),
-          onSuccess: (session) => console.log('[Login] Final session verification success:', session.user?.email)
-        });
-      }
-
-      // Clear localStorage flags
-      localStorage.removeItem('loginInProgress');
-      localStorage.removeItem('loginTimestamp');
-      localStorage.removeItem('loginEmail');
-
-      if (!sessionResult.success) {
-        console.error('[Login] All session establishment attempts failed');
+      // Force redirect with try-catch only around the redirect
+      try {
+        console.log('[Login] Attempting redirect to dashboard...');
+        window.location.href = '/dashboard';
+      } catch (redirectError) {
+        console.error('[Login] Redirect failed:', redirectError);
         setErrors({ 
-          general: "Authentication succeeded but session establishment failed. Please try refreshing the page."
+          general: "Login successful! Please refresh the page manually to continue to your dashboard."
         });
         setLoadingState('idle');
         return;
       }
 
-      console.log('[Login] Session establishment successful after', Date.now() - startTime, 'ms');
-
-      // Step 4: Multiple redirect methods as fallbacks
-      console.log('[Login] Step 4: Initiating redirect with multiple fallback methods');
-      setLoadingState('redirecting');
-
-      const redirectToDashboard = async () => {
-        const maxRedirectAttempts = 3;
-        let currentAttempt = 0;
-
-        const attemptRedirect = async (method: string) => {
-          currentAttempt++;
-          console.log(`[Login] Redirect attempt ${currentAttempt}/${maxRedirectAttempts} using ${method}`);
-          
-          try {
-            switch (method) {
-              case 'router':
-                await router.replace('/dashboard');
-                break;
-              case 'location.replace':
-                window.location.replace('/dashboard');
-                break;
-              case 'location.href':
-                window.location.href = '/dashboard';
-                break;
-              case 'reload':
-                window.location.reload();
-                break;
-            }
-            
-            // Wait a bit to see if redirect worked
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // If we're still on the login page, try next method
-            if (window.location.pathname === '/login') {
-              console.warn(`[Login] ${method} redirect failed, trying next method...`);
-              return false;
-            }
-            
-            return true;
-          } catch (error) {
-            console.error(`[Login] ${method} redirect failed:`, error);
-            return false;
-          }
-        };
-
-        // Try router first (most reliable for Next.js)
-        if (!(await attemptRedirect('router'))) {
-          // Try window.location.replace
-          if (!(await attemptRedirect('location.replace'))) {
-            // Try window.location.href
-            if (!(await attemptRedirect('location.href'))) {
-              // Final fallback: page reload
-              console.log('[Login] All redirect methods failed, using page reload as final fallback');
-              await attemptRedirect('reload');
-            }
-          }
-        }
-      };
-
-      // Start redirect process
-      await redirectToDashboard();
-
     } catch (error) {
       console.error('[Login] Unexpected error during login:', error);
       
       // Clear localStorage flags on error
-      localStorage.removeItem('loginInProgress');
-      localStorage.removeItem('loginTimestamp');
-      localStorage.removeItem('loginEmail');
+      localStorage.removeItem('lastLoginTimestamp');
+      localStorage.removeItem('lastLoginEmail');
+      localStorage.removeItem('sessionExpiresAt');
       
       setErrors({
         general: error instanceof Error
@@ -396,61 +305,50 @@ export default function LoginPage() {
 
   // Handle page reload scenarios and authentication checks
   React.useEffect(() => {
-    console.log('[Login] Component mounted, checking for login in progress...');
+    console.log('[Login] Component mounted, checking for recent login...');
     
-    // Check if login was in progress from localStorage
-    const loginInProgress = localStorage.getItem('loginInProgress');
-    const loginTimestamp = localStorage.getItem('loginTimestamp');
-    const loginEmail = localStorage.getItem('loginEmail');
+    // Check if there was a recent login from localStorage
+    const lastLoginTimestamp = localStorage.getItem('lastLoginTimestamp');
+    const lastLoginEmail = localStorage.getItem('lastLoginEmail');
+    const sessionExpiresAt = localStorage.getItem('sessionExpiresAt');
     
-    if (loginInProgress === 'true' && loginTimestamp && loginEmail) {
-      const timeSinceLogin = Date.now() - parseInt(loginTimestamp);
+    if (lastLoginTimestamp && lastLoginEmail) {
+      const timeSinceLogin = Date.now() - parseInt(lastLoginTimestamp);
       
-      // If login was in progress less than 30 seconds ago, try to complete it
+      // If login was recent (less than 30 seconds ago), try to redirect
       if (timeSinceLogin < 30000) {
-        console.log('[Login] Detected login in progress from page reload, attempting to complete...');
-        setForm({ email: loginEmail, password: '' });
+        console.log('[Login] Detected recent login, attempting to redirect...');
+        setForm({ email: lastLoginEmail, password: '' });
         
         // Clear the flags
-        localStorage.removeItem('loginInProgress');
-        localStorage.removeItem('loginTimestamp');
-        localStorage.removeItem('loginEmail');
+        localStorage.removeItem('lastLoginTimestamp');
+        localStorage.removeItem('lastLoginEmail');
+        localStorage.removeItem('sessionExpiresAt');
         
-        // Try to establish session and redirect
-        const completeLogin = async () => {
+        // Simple redirect attempt
+        const attemptRedirect = async () => {
           try {
-            setLoadingState('establishing');
-            console.log('[Login] Attempting to complete login after page reload...');
+            setLoadingState('redirecting');
+            console.log('[Login] Attempting redirect after page reload...');
             
-            const sessionResult = await ensureSessionPersistence({
-              forceRefresh: true,
-              onError: (error) => console.error('[Login] Session completion error:', error),
-              onSuccess: (session) => console.log('[Login] Session completion success:', session.user?.email)
-            });
-            
-            if (sessionResult.success) {
-              console.log('[Login] Login completed successfully after page reload');
-              setLoadingState('redirecting');
-              await router.replace('/dashboard');
-            } else {
-              console.log('[Login] Could not complete login after page reload');
-              setLoadingState('idle');
-            }
+            // Wait a moment then redirect
+            await new Promise(resolve => setTimeout(resolve, 500));
+            window.location.href = '/dashboard';
           } catch (error) {
-            console.error('[Login] Error completing login after page reload:', error);
+            console.error('[Login] Error redirecting after page reload:', error);
             setLoadingState('idle');
           }
         };
         
-        completeLogin();
+        attemptRedirect();
       } else {
         // Clear old flags
-        localStorage.removeItem('loginInProgress');
-        localStorage.removeItem('loginTimestamp');
-        localStorage.removeItem('loginEmail');
+        localStorage.removeItem('lastLoginTimestamp');
+        localStorage.removeItem('lastLoginEmail');
+        localStorage.removeItem('sessionExpiresAt');
       }
     }
-  }, [router]);
+  }, []);
 
   // Helper function to get loading text based on state
   const getLoadingText = () => {
@@ -458,7 +356,6 @@ export default function LoginPage() {
       case 'validating': return 'Validating...';
       case 'checking': return 'Checking credentials...';
       case 'logging': return 'Logging you in...';
-      case 'establishing': return 'Establishing session...';
       case 'redirecting': return 'Redirecting...';
       case 'resending': return 'Sending confirmation...';
       default: return 'Sign In';

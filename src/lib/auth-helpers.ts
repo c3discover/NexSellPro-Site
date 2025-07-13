@@ -52,15 +52,7 @@ export interface SessionPersistenceResult {
   duration: number;
 }
 
-interface CookieOptions {
-  path?: string;
-  domain?: string;
-  maxAge?: number;
-  expires?: Date;
-  secure?: boolean;
-  httpOnly?: boolean;
-  sameSite?: 'strict' | 'lax' | 'none';
-}
+
 
 // ============================================================================
 // UTILITY FUNCTIONS

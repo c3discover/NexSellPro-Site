@@ -101,7 +101,6 @@ export default function LoginPage() {
   const [loadingState, setLoadingState] = useState<LoadingState>('idle');
   const [showPassword, setShowPassword] = useState(false);
   const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
-  const [redirectAttempts, setRedirectAttempts] = useState(0);
 
   /**
    * Handles input changes and clears related errors
@@ -192,7 +191,6 @@ export default function LoginPage() {
     try {
       setErrors({});
       setEmailNotConfirmed(false);
-      setRedirectAttempts(0);
       
       // Step 1: Client-side validation
       console.log('[Login] Step 1: Client-side validation');

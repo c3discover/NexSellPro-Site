@@ -346,7 +346,7 @@ export default function DebugAuthPage() {
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6">
             <h2 className="text-lg font-semibold text-blue-400 mb-2">What to Look For</h2>
             <ul className="text-sm text-gray-300 space-y-1">
-              <li>• <strong>Client vs Server mismatch:</strong> If client shows logged in but server doesn't, there's a cookie/session sync issue</li>
+              <li>• <strong>Client vs Server mismatch:</strong> If client shows logged in but server doesn&apos;t, there&apos;s a cookie/session sync issue</li>
               <li>• <strong>Missing cookies:</strong> Supabase needs specific cookies for authentication to work</li>
               <li>• <strong>Expired sessions:</strong> Sessions that are expired or about to expire</li>
               <li>• <strong>Performance issues:</strong> Slow session checks might indicate network problems</li>

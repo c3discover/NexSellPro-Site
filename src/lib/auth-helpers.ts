@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient, Session, User } from '@supabase/supabase-js';
+import { SupabaseClient, Session, User } from '@supabase/supabase-js';
 import { createBrowserClient } from '@supabase/ssr';
 
 // ============================================================================
@@ -50,15 +50,6 @@ export interface SessionPersistenceResult {
   refreshed: boolean;
   /** Time taken for the operation in milliseconds */
   duration: number;
-}
-
-/**
- * Cookie management interface for cross-environment compatibility
- */
-interface CookieManager {
-  get(name: string): string | undefined;
-  set(name: string, value: string, options?: CookieOptions): void;
-  delete(name: string): void;
 }
 
 interface CookieOptions {

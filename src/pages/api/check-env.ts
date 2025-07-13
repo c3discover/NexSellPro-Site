@@ -87,7 +87,7 @@ export default async function handler(
         if (!url.hostname.includes('supabase.co')) {
           response.errors.push('NEXT_PUBLIC_SUPABASE_URL does not appear to be a valid Supabase URL');
         }
-      } catch (error) {
+      } catch {
         response.errors.push('NEXT_PUBLIC_SUPABASE_URL is not a valid URL format');
       }
     }

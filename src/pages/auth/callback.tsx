@@ -45,6 +45,10 @@ export default function AuthCallback() {
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const queryParams = new URLSearchParams(window.location.search);
     
+    console.log('[Auth Callback] URL:', window.location.href);
+    console.log('[Auth Callback] Hash params:', Object.fromEntries(hashParams.entries()));
+    console.log('[Auth Callback] Query params:', Object.fromEntries(queryParams.entries()));
+    
     // Check for errors first
     const errorParam = hashParams.get('error') || queryParams.get('error');
     const errorDescription = hashParams.get('error_description') || queryParams.get('error_description');
@@ -70,26 +74,42 @@ export default function AuthCallback() {
       authType = 'magic_link';
     }
 
-    // Auth type detected: ${authType}
+    console.log('[Auth Callback] Auth type detected:', authType);
     return { type: authType, hasError: false, errorMessage: null };
   };
 
   // Attempt to get or establish session
   const establishSession = async (): Promise<boolean> => {
     try {
-      // Check if there's a session
+      // First, try to get the current session
       const { data: { session: currentSession } } = await supabase.auth.getSession();
-      console.log('Session exists?', !!currentSession);
+      console.log('[Auth Callback] Current session exists?', !!currentSession);
+      
       if (currentSession) {
-        console.log('User:', currentSession.user.email);
-        console.log('Expires:', new Date((currentSession.expires_at || 0) * 1000));
+        console.log('[Auth Callback] User:', currentSession.user.email);
+        console.log('[Auth Callback] Expires:', new Date((currentSession.expires_at || 0) * 1000));
+        return true;
       }
 
-      // Check cookies
-      console.log('Auth cookies:', document.cookie.split(';').filter(c => c.includes('sb-')));
+      // If no session, try to refresh to establish one
+      console.log('[Auth Callback] No session found, attempting refresh...');
+      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError) {
+        console.error('[Auth Callback] Session refresh error:', refreshError);
+        return false;
+      }
 
-      const session = await ensureSessionPersistence();
-      return !!session;
+      if (refreshedSession) {
+        console.log('[Auth Callback] Session established via refresh');
+        return true;
+      }
+
+      // Final attempt: check if session was established via URL processing
+      const { data: { session: finalSession } } = await supabase.auth.getSession();
+      console.log('[Auth Callback] Final session check:', !!finalSession);
+      
+      return !!finalSession;
     } catch (error) {
       console.error('[Auth Callback] Session establishment error:', error);
       return false;
@@ -164,10 +184,26 @@ export default function AuthCallback() {
       return;
     }
 
-    // CRITICAL: Give Supabase time to process URL tokens
-    // This delay is necessary because detectSessionInUrl happens asynchronously
+    // If no auth type is detected, this might be a direct visit or failed redirect
+    if (type === 'unknown') {
+      console.warn('[Auth Callback] No auth type detected, checking for session...');
+      
+      // Check if user is already authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        console.log('[Auth Callback] User already authenticated, redirecting to dashboard');
+        handleSuccess('signup');
+        return;
+      } else {
+        console.warn('[Auth Callback] No session found, redirecting to login');
+        handleError('No authentication parameters found. Please try logging in.', 'signup');
+        return;
+      }
+    }
+
+    // Give Supabase time to process URL tokens (reduced from 2000ms to 1000ms)
     console.log('[Auth Callback] Waiting for Supabase to process URL tokens...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     console.log('[Auth Callback] Starting session establishment...');
 
     // Set up maximum wait time
@@ -176,7 +212,7 @@ export default function AuthCallback() {
       handleError('Authentication timeout. Please try again.', type);
     }, maxWaitTime);
 
-    // Retry logic for session establishment
+    // Retry logic for session establishment with shorter intervals
     const attemptSessionEstablishment = async (): Promise<void> => {
       const hasSession = await establishSession();
       
@@ -192,9 +228,9 @@ export default function AuthCallback() {
       retryCountRef.current++;
       
       if (retryCountRef.current < maxRetries) {
-        // Retry attempt ${retryCountRef.current}/${maxRetries}
-        // Increase the wait time between retries to 2 seconds
-        setTimeout(attemptSessionEstablishment, 2000);
+        console.log(`[Auth Callback] Retry attempt ${retryCountRef.current}/${maxRetries}`);
+        // Shorter retry intervals (1 second instead of 2)
+        setTimeout(attemptSessionEstablishment, 1000);
       } else {
         console.error('[Auth Callback] Max retries reached');
         if (timeoutRef.current) {
@@ -202,16 +238,16 @@ export default function AuthCallback() {
           timeoutRef.current = null;
         }
         
-        // Handle based on auth type
+        // Handle based on auth type with more specific messages
         switch (type) {
           case 'signup':
-            handleError('Email confirmed but could not log you in. Please log in manually.', type);
+            handleError('Email confirmed successfully! Please log in with your credentials.', type);
             break;
           case 'recovery':
-            handleError('Invalid or expired reset link', type);
+            handleError('Invalid or expired reset link. Please request a new one.', type);
             break;
           case 'magic_link':
-            handleError('Magic link expired or invalid', type);
+            handleError('Magic link expired or invalid. Please try again.', type);
             break;
           default:
             handleError('Authentication failed. Please try again.', type);

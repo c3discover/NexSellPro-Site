@@ -71,24 +71,25 @@ export async function middleware(request: NextRequest) {
   );
 
   try {
-    // Refresh session to ensure we have the latest auth state
-    // This is critical for production environments where cookies may be stale
-    if (isDevelopment) {
-      console.log('[Middleware] Refreshing session...');
-    }
-    
-    const { error: refreshError } = await supabase.auth.refreshSession();
-    
-    if (refreshError) {
-      console.warn('[Middleware] Session refresh warning:', refreshError.message);
-      // Continue with existing session even if refresh fails
-    } else if (isDevelopment) {
-      console.log('[Middleware] Session refresh completed');
-    }
+    // Only refresh session for protected routes, not for auth routes
+    // This prevents conflicts during the login process
+    if (pathname.startsWith('/dashboard') || pathname.startsWith('/profile') || pathname.startsWith('/settings')) {
+      if (isDevelopment) {
+        console.log('[Middleware] Refreshing session for protected route...');
+      }
+      
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError) {
+        console.warn('[Middleware] Session refresh warning:', refreshError.message);
+        // Continue with existing session even if refresh fails
+      } else if (isDevelopment) {
+        console.log('[Middleware] Session refresh completed');
+      }
 
-    // 200ms delay for cookie propagation in production environments
-    // Matches timing strategy in auth-helpers for consistency
-    await new Promise(resolve => setTimeout(resolve, 200));
+      // 200ms delay for cookie propagation in production environments
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
 
     // Get session with improved error handling
     const { data: { session }, error } = await supabase.auth.getSession();

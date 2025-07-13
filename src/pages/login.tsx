@@ -241,15 +241,25 @@ export default function LoginPage() {
         setLoadingState('logging');
         
         try {
-          // Ensure session is properly persisted with cookie propagation
-          await ensureSessionPersistence();
-          console.log('[Login] Session persistence returned, proceeding with redirect...');
+          console.log('[Login] Authentication successful, establishing session...');
+          
+          // Wait a moment for session to be properly established
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Verify session exists before redirecting
+          const { data: { session: verifiedSession }, error: sessionError } = await supabase.auth.getSession();
 
-          // CRITICAL: Verify session exists before redirecting
-          const { data: { session: verifiedSession } } = await supabase.auth.getSession();
+          if (sessionError) {
+            console.error('[Login] Session verification error:', sessionError);
+            setErrors({ 
+              general: "Authentication succeeded but session verification failed. Please try logging in again."
+            });
+            setLoadingState('idle');
+            return;
+          }
 
           if (!verifiedSession) {
-            console.error('[Login] Session not found after persistence!');
+            console.error('[Login] Session not found after authentication!');
             setErrors({ 
               general: "Authentication succeeded but session could not be established. Please try logging in again."
             });
@@ -258,11 +268,16 @@ export default function LoginPage() {
           }
 
           console.log('[Login] Session verified, redirecting to dashboard...');
+          console.log('[Login] User:', verifiedSession.user.email);
 
           // Use router.replace to avoid history issues
           await router.replace('/dashboard');
         } catch (err) {
-          console.error("Session refresh failed:", err);
+          console.error("[Login] Session establishment failed:", err);
+          setErrors({ 
+            general: "Authentication succeeded but redirect failed. Please try refreshing the page."
+          });
+          setLoadingState('idle');
         }
       } else {
         console.error("Login succeeded but no session data!");
@@ -415,6 +430,29 @@ export default function LoginPage() {
             Don&apos;t have an account?{' '}
             <Link href="/signup" className="text-accent hover:underline hover-underline">Sign up</Link>
           </div>
+          
+          {/* Debug section - only show in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-4 pt-4 border-t border-slate-700">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/auth-test');
+                    const data = await response.json();
+                    console.log('[Debug] Auth status:', data);
+                    alert(`Auth Status: ${JSON.stringify(data, null, 2)}`);
+                  } catch (error) {
+                    console.error('[Debug] Auth test failed:', error);
+                    alert('Auth test failed');
+                  }
+                }}
+                className="text-xs text-gray-500 hover:text-gray-400 underline"
+              >
+                Debug: Check Auth Status
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </LoginErrorBoundary>

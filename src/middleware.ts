@@ -1,43 +1,47 @@
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  // Only run middleware on dashboard routes
+  // Only check authentication for dashboard routes
   if (!request.nextUrl.pathname.startsWith('/dashboard')) {
-    return NextResponse.next()
+    return NextResponse.next();
   }
 
-  // Create Supabase client for server-side auth check
+  // Create a response object
+  const response = NextResponse.next();
+
+  // Create Supabase client
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll()
+          return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => {
-            request.cookies.set(name, value)
-          })
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
         },
       },
     }
-  )
+  );
 
-  // Check for session
-  const { data: { session } } = await supabase.auth.getSession()
+  // Check if user has a session
+  const { data: { session } } = await supabase.auth.getSession();
 
-  // If no session, redirect to login
+  // No session? Redirect to login
   if (!session) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Allow access to dashboard
-  return NextResponse.next()
+  // Has session? Allow access
+  return response;
 }
 
+// Only run on dashboard routes
 export const config = {
-  matcher: ['/dashboard/:path*']
-} 
+  matcher: '/dashboard/:path*'
+};

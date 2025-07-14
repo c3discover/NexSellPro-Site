@@ -31,6 +31,11 @@ export async function middleware(request: NextRequest) {
   const isDevelopment = process.env.NODE_ENV === 'development';
   const startTime = Date.now();
 
+  // Add extensive logging at the very start
+  console.log('[Middleware] ============ START ============');
+  console.log('[Middleware] Path:', pathname);
+  console.log('[Middleware] Method:', request.method);
+
   // Extensive debug logging in development
   if (isDevelopment) {
     console.log(`[Middleware] ===== Starting middleware for: ${pathname} =====`);
@@ -59,6 +64,7 @@ export async function middleware(request: NextRequest) {
 
   // If it's a public route, allow access without any auth check
   if (isPublicRoute) {
+    console.log('[Middleware] Action: Allowing access to public route');
     if (isDevelopment) {
       console.log(`[Middleware] Public route detected: ${pathname} - skipping all auth checks`);
       console.log(`[Middleware] Total middleware time: ${Date.now() - startTime}ms`);
@@ -71,6 +77,7 @@ export async function middleware(request: NextRequest) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
+    console.log('[Middleware] Action: Allowing access (missing env vars)');
     if (isDevelopment) {
       console.error('[Middleware] Missing Supabase environment variables');
     }
@@ -101,6 +108,7 @@ export async function middleware(request: NextRequest) {
       }
     );
   } catch (error) {
+    console.log('[Middleware] Action: Allowing access (Supabase client creation failed)');
     if (isDevelopment) {
       console.error('[Middleware] Failed to create Supabase client:', error);
     }
@@ -163,7 +171,12 @@ export async function middleware(request: NextRequest) {
       sessionError = error;
     }
 
+    // Add logging right after getting the session
+    console.log('[Middleware] Session exists:', !!session);
+    console.log('[Middleware] User email:', session?.user?.email);
+
     if (sessionError) {
+      console.log('[Middleware] Action: Allowing access (session check error)');
       if (isDevelopment) {
         console.error('[Middleware] Session check error:', sessionError);
         console.error('[Middleware] Error details:', {
@@ -193,6 +206,7 @@ export async function middleware(request: NextRequest) {
     // Handle protected routes (dashboard, profile, settings)
     if (isProtectedRoute) {
       if (!isAuthenticated) {
+        console.log('[Middleware] Action: Redirecting to login');
         if (isDevelopment) {
           console.log(`[Middleware] Redirecting unauthenticated user from ${pathname} to login`);
         }
@@ -201,6 +215,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(loginUrl);
       }
       // User is authenticated, allow access to protected route
+      console.log('[Middleware] Action: Allowing authenticated access');
       if (isDevelopment) {
         console.log(`[Middleware] Authenticated user accessing protected route: ${pathname}`);
       }
@@ -221,6 +236,7 @@ export async function middleware(request: NextRequest) {
           const redirectUrl = new URL(redirectTo, request.url);
           // Ensure redirect is to same origin for security
           if (redirectUrl.origin === request.nextUrl.origin) {
+            console.log('[Middleware] Action: Redirecting authenticated user to redirect URL');
             if (isDevelopment) {
               console.log(`[Middleware] Redirecting authenticated user to: ${redirectTo}`);
             }
@@ -229,12 +245,14 @@ export async function middleware(request: NextRequest) {
         }
         
         // Default redirect to dashboard if no valid redirect parameter
+        console.log('[Middleware] Action: Redirecting authenticated user to dashboard');
         if (isDevelopment) {
           console.log('[Middleware] Redirecting authenticated user to dashboard (default)');
         }
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
       // User is not authenticated, allow access to login/signup
+      console.log('[Middleware] Action: Allowing access to auth route');
       if (isDevelopment) {
         console.log(`[Middleware] Unauthenticated user accessing auth route: ${pathname}`);
       }
@@ -242,12 +260,14 @@ export async function middleware(request: NextRequest) {
     }
 
     // Allow all other routes (public by default)
+    console.log('[Middleware] Action: Allowing access to public route');
     if (isDevelopment) {
       console.log(`[Middleware] Allowing access to public route: ${pathname}`);
     }
     return response;
 
   } catch (error) {
+    console.log('[Middleware] Action: Allowing access (unexpected error)');
     if (isDevelopment) {
       console.error('[Middleware] Unexpected error:', error);
       console.error('[Middleware] Error stack:', error instanceof Error ? error.stack : 'No stack trace');

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { getCurrentUser, signOut, getUserProfile, type UserProfile, checkAuthStatus } from '@/lib/supabase';
+import { signOut, getUserProfile, type UserProfile, checkAuthStatus } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
 
 
 export default function DashboardPage() {

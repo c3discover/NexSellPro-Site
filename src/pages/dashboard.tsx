@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { getCurrentUser, signOut, getUserProfile, type UserProfile } from '@/lib/supabase';
+import { getCurrentUser, signOut, getUserProfile, type UserProfile, checkAuthStatus } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -11,26 +13,38 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
 
-  // Get user data on page load (middleware already checked auth)
+  // Check authentication and load user data on page load
   useEffect(() => {
-    async function loadUserData() {
+    async function checkAuthAndLoadData() {
       try {
-        const currentUser = await getCurrentUser();
-        if (currentUser) {
-          setUser(currentUser);
-          
-          // Fetch user profile
-          const profile = await getUserProfile(currentUser.id);
-          setUserProfile(profile);
+        // Check authentication status first
+        const authStatus = await checkAuthStatus();
+        
+        if (!authStatus.isAuthenticated || !authStatus.user) {
+          // No valid session, redirect to login
+          console.log('No valid session found, redirecting to login');
+          router.replace('/login');
+          return;
         }
+
+        // User is authenticated, set user data
+        setUser(authStatus.user);
+        
+        // Fetch user profile
+        const profile = await getUserProfile(authStatus.user.id);
+        setUserProfile(profile);
+        
       } catch (error) {
-        console.error('Failed to load user data:', error);
+        console.error('Failed to check authentication or load user data:', error);
+        // On error, redirect to login for security
+        router.replace('/login');
       } finally {
         setLoading(false);
       }
     }
-    loadUserData();
-  }, []);
+    
+    checkAuthAndLoadData();
+  }, [router]);
 
   // Handle sign out
   async function handleSignOut() {
@@ -53,7 +67,7 @@ export default function DashboardPage() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
           </svg>
-          <p className="text-gray-300">Loading your dashboard...</p>
+          <p className="text-gray-300">Loading...</p>
         </div>
       </div>
     );

@@ -56,7 +56,7 @@ export default async function handler(
     environment: {
       nodeEnv: process.env.NODE_ENV || 'unknown',
       isDevelopment: isDevelopment,
-      isProduction: process.env.NODE_ENV === 'production'
+      isProduction: (process.env.NODE_ENV || '') === 'production'
     },
     supabase: {
       urlConfigured: false,

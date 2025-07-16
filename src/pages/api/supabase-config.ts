@@ -1,6 +1,20 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse<any>) {
+export default async function handler(
+  req: NextApiRequest, 
+  res: NextApiResponse<{
+    message: string;
+    config: {
+      supabaseUrl: string | undefined;
+      hasAnonKey: boolean;
+      nodeEnv: string | undefined;
+      origin: string | undefined;
+      userAgent: string | undefined;
+      expectedRedirectUrl: string;
+    };
+    recommendations: string[];
+  } | { error: string }>
+) {
   // SECURITY: Block this endpoint in production
   if (process.env.NODE_ENV === 'production') {
     return res.status(404).json({ error: 'Not found' });

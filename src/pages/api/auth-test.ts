@@ -51,7 +51,7 @@ interface AuthTestResponse {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<AuthTestResponse>
+  res: NextApiResponse<AuthTestResponse | { error: string }>
 ) {
   // SECURITY: Block this endpoint in production
   if (process.env.NODE_ENV === 'production') {

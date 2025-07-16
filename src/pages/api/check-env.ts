@@ -39,7 +39,7 @@ interface EnvCheckResponse {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<EnvCheckResponse>
+  res: NextApiResponse<EnvCheckResponse | { error: string }>
 ) {
   // SECURITY: Block this endpoint in production
   if (process.env.NODE_ENV === 'production') {

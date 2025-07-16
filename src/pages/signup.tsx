@@ -165,7 +165,7 @@ export default function SignupPage() {
       try {
         captchaRef.current?.execute();
         return;
-      } catch (error) {
+      } catch {
         setErrors({ captcha: 'Please complete the security check.' });
         return;
       }

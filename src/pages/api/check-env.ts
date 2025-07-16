@@ -42,7 +42,7 @@ export default async function handler(
   res: NextApiResponse<EnvCheckResponse | { error: string }>
 ) {
   // SECURITY: Block this endpoint in production
-  if (process.env.NODE_ENV === 'production') {
+  if ((process.env.NODE_ENV as string) === 'production') {
     return res.status(404).json({ error: 'Not found' });
   }
 
@@ -56,7 +56,7 @@ export default async function handler(
     environment: {
       nodeEnv: process.env.NODE_ENV || 'unknown',
       isDevelopment: isDevelopment,
-      isProduction: (process.env.NODE_ENV || '') === 'production'
+      isProduction: (process.env.NODE_ENV as string) === 'production'
     },
     supabase: {
       urlConfigured: false,

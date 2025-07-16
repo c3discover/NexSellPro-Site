@@ -11,7 +11,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // Environment detection for timing adjustments
 const isDevelopment = process.env.NODE_ENV === 'development';
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = (process.env.NODE_ENV as string) === 'production';
 
 // Debug flag for development logging
 export const DEBUG = isDevelopment;

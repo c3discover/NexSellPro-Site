@@ -54,7 +54,7 @@ export default async function handler(
   res: NextApiResponse<AuthTestResponse | { error: string }>
 ) {
   // SECURITY: Block this endpoint in production
-  if (process.env.NODE_ENV === 'production') {
+  if ((process.env.NODE_ENV as string) === 'production') {
     return res.status(404).json({ error: 'Not found' });
   }
 

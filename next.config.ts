@@ -6,8 +6,8 @@ const nextConfig: NextConfig = {
   pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
   // Configure directory structure
   distDir: '.next',
-  // Enable source maps for debugging
-  productionBrowserSourceMaps: true,
+  // Enable source maps only in development for security
+  productionBrowserSourceMaps: process.env.NODE_ENV === 'development',
 };
 
 export default nextConfig;

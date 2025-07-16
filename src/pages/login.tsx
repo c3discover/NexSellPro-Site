@@ -178,29 +178,23 @@ export default function LoginPage() {
 
     // Prevent multiple submissions
     if (loadingState !== 'idle') {
-      console.log('[Login] Prevented multiple submission attempts');
       return;
     }
-
-    console.log('[Login] Starting login process...', { email: form.email });
 
     try {
       setErrors({});
       setEmailNotConfirmed(false);
       
       // Step 1: Client-side validation
-      console.log('[Login] Step 1: Client-side validation');
       setLoadingState('validating');
       const validation = validate(form);
       if (Object.keys(validation).length > 0) {
-        console.log('[Login] Validation failed:', validation);
         setErrors(validation);
         setLoadingState('idle');
         return;
       }
 
       // Step 2: Authenticate with Supabase
-      console.log('[Login] Step 2: Authenticating with Supabase');
       setLoadingState('checking');
       const { data, error } = await supabase.auth.signInWithPassword({
         email: form.email,
@@ -248,16 +242,17 @@ export default function LoginPage() {
       }
 
       // Log session details for debugging
-      console.log('[Login] Authentication successful:', {
-        userId: data.user.id,
-        email: data.user.email,
-        sessionExpiresAt: data.session.expires_at,
-        accessTokenPreview: data.session.access_token ? data.session.access_token.substring(0, 20) + '...' : 'Missing',
-        refreshTokenPresent: !!data.session.refresh_token
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Login] Authentication successful:', {
+          userId: data.user.id,
+          email: data.user.email,
+          sessionExpiresAt: data.session.expires_at,
+          accessTokenPreview: data.session.access_token ? data.session.access_token.substring(0, 20) + '...' : 'Missing',
+          refreshTokenPresent: !!data.session.refresh_token
+        });
+      }
 
       // Step 3: Simple success path - trust Supabase session and redirect
-      console.log('[Login] Step 3: Proceeding with simple redirect');
       setLoadingState('redirecting');
 
       // Store session info for debugging
@@ -266,12 +261,10 @@ export default function LoginPage() {
       localStorage.setItem('sessionExpiresAt', data.session.expires_at?.toString() || 'unknown');
 
       // Simple delay then redirect
-      console.log('[Login] Waiting 1 second before redirect...');
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Force redirect with try-catch only around the redirect
       try {
-        console.log('[Login] Attempting redirect to dashboard...');
         window.location.href = '/dashboard';
       } catch (redirectError) {
         console.error('[Login] Redirect failed:', redirectError);
@@ -301,8 +294,6 @@ export default function LoginPage() {
 
   // Handle page reload scenarios and authentication checks
   React.useEffect(() => {
-    console.log('[Login] Component mounted, checking for recent login...');
-    
     // Check if there was a recent login from localStorage
     const lastLoginTimestamp = localStorage.getItem('lastLoginTimestamp');
     const lastLoginEmail = localStorage.getItem('lastLoginEmail');
@@ -312,7 +303,6 @@ export default function LoginPage() {
       
       // If login was recent (less than 30 seconds ago), try to redirect
       if (timeSinceLogin < 30000) {
-        console.log('[Login] Detected recent login, attempting to redirect...');
         setForm({ email: lastLoginEmail, password: '' });
         
         // Clear the flags
@@ -324,7 +314,6 @@ export default function LoginPage() {
         const attemptRedirect = async () => {
           try {
             setLoadingState('redirecting');
-            console.log('[Login] Attempting redirect after page reload...');
             
             // Wait a moment then redirect
             await new Promise(resolve => setTimeout(resolve, 500));

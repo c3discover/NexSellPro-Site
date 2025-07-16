@@ -1,28 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# NexSellPro - Walmart Marketplace Product Analysis Tool
+
+A Next.js application that helps Walmart Marketplace sellers find profitable products through instant analysis of listings, profit margins, ROI, and competition data.
+
+## Features
+
+- 🔐 **Authentication**: Complete auth flow with Supabase (signup, login, password reset)
+- 📊 **Product Analysis**: Instant profit margin and ROI calculations
+- 🎯 **Landing Page**: Marketing site with features, pricing, and FAQs
+- 📱 **Responsive Design**: Mobile-first design with Tailwind CSS
+- 🔒 **Security**: Production-ready with proper environment guards
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Styling**: Tailwind CSS
+- **Authentication**: Supabase Auth
+- **Database**: Supabase (PostgreSQL)
+- **Package Manager**: pnpm
 
 ## Getting Started
 
-First, install dependencies:
+### Prerequisites
 
-```bash
-pnpm install
-```
+1. Node.js 18+ installed
+2. Supabase project created
+3. Environment variables configured
 
-Then, run the development server:
+### Installation
 
-```bash
-pnpm dev
-```
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd nexsellpro-site
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+3. **Set up environment variables**
+   Create a `.env.local` file in the project root:
+   ```bash
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+4. **Set up database schema**
+   Run the SQL commands from `database_setup.sql` in your Supabase SQL editor.
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+5. **Configure Supabase**
+   - Go to Authentication → URL Configuration
+   - Set Site URL: `http://localhost:3000` (dev) / `https://nexsellpro.com` (prod)
+   - Add redirect URLs:
+     - `http://localhost:3000/auth/callback`
+     - `https://nexsellpro.com/auth/callback`
+     - `http://localhost:3000/reset-password`
+     - `https://nexsellpro.com/reset-password`
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+6. **Start development server**
+   ```bash
+   pnpm dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000) to see the application.
 
 ## Available Scripts
 
@@ -31,17 +72,35 @@ This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-appl
 - `pnpm start` - Start the production server
 - `pnpm lint` - Run ESLint
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── lib/                 # Utility libraries
+│   ├── supabase.ts     # Supabase client configuration
+│   └── auth-helpers.ts # Authentication helper functions
+├── pages/              # Next.js pages
+│   ├── api/           # API routes (with production guards)
+│   ├── auth/          # Authentication pages
+│   └── ...            # Other pages
+└── styles/            # Global styles
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+## Security Features
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- ✅ Production guards on debug API endpoints
+- ✅ Environment variable validation
+- ✅ TypeScript strict mode
+- ✅ Source maps disabled in production
+- ✅ Proper error handling without information leakage
 
-## Deploy on Vercel
+## Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The application is configured for deployment on Vercel with:
+- Automatic environment variable handling
+- Production optimizations enabled
+- Security headers configured
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+## Support
+
+For issues and questions, please refer to the documentation in the project files or contact the development team.

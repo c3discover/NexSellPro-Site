@@ -124,25 +124,29 @@ export default function AuthCallback() {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (session?.user) {
-      // Insert user_plan row if one doesn't already exist
-      const { data: planRow, error: planFetchError } = await supabase
-        .from("user_plan")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .single();
+      // INSERT A NEW ROW INTO user_plan IF MISSING
+      const userId = session.user.id;
 
-      if (!planRow && !planFetchError) {
-        const { error: insertError } = await supabase.from("user_plan").insert([
-          {
-            user_id: session.user.id,
-            plan: "beta", // or "free" or whatever tier you want
-          },
-        ]);
+      if (userId) {
+        const { data: existingPlan, error: fetchError } = await supabase
+          .from("user_plan")
+          .select("*")
+          .eq("user_id", userId)
+          .maybeSingle();
 
-        if (insertError) {
-          console.error("Failed to insert user plan:", insertError.message);
-        } else {
-          console.log("✅ User plan inserted successfully");
+        if (!existingPlan) {
+          const { error: insertError } = await supabase.from("user_plan").insert([
+            {
+              user_id: userId,
+              plan: "beta",
+            },
+          ]);
+
+          if (insertError) {
+            console.error("Insert failed:", insertError.message);
+          } else {
+            console.log("✅ user_plan inserted");
+          }
         }
       }
     }

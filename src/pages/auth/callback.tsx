@@ -128,7 +128,7 @@ export default function AuthCallback() {
       const userId = session.user.id;
 
       if (userId) {
-        const { data: existingPlan, error: fetchError } = await supabase
+        const { data: existingPlan } = await supabase
           .from("user_plan")
           .select("*")
           .eq("user_id", userId)

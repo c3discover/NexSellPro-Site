@@ -41,6 +41,11 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<EnvCheckResponse>
 ) {
+  // SECURITY: Block this endpoint in production
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
   const startTime = Date.now();
   const isDevelopment = process.env.NODE_ENV === 'development';
   

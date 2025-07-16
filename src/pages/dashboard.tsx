@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { signOut, getUserProfile, type UserProfile, checkAuthStatus } from '@/lib/supabase';
+import { signOut, getUserProfile, getUserPlan, type UserProfile, type UserPlan, checkAuthStatus } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
 
@@ -9,6 +9,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -29,9 +30,13 @@ export default function DashboardPage() {
         // User is authenticated, set user data
         setUser(authStatus.user);
         
-        // Fetch user profile
-        const profile = await getUserProfile(authStatus.user.id);
+        // Fetch user profile and plan
+        const [profile, plan] = await Promise.all([
+          getUserProfile(authStatus.user.id),
+          getUserPlan(authStatus.user.id)
+        ]);
         setUserProfile(profile);
+        setUserPlan(plan);
         
       } catch (error) {
         console.error('Failed to check authentication or load user data:', error);
@@ -225,6 +230,15 @@ export default function DashboardPage() {
                     <div className="text-sm text-gray-400">••••••••</div>
                   </div>
                   <button className="text-accent hover:underline text-sm">Change</button>
+                </div>
+                <div className="flex items-center justify-between py-3 border-b border-slate-700">
+                  <div>
+                    <div className="font-medium text-white">Subscription Plan</div>
+                    <div className="text-sm text-accent font-medium">
+                      {userPlan?.plan ? userPlan.plan.charAt(0).toUpperCase() + userPlan.plan.slice(1) : 'Free'}
+                    </div>
+                  </div>
+                  <button className="text-accent hover:underline text-sm">Upgrade</button>
                 </div>
                 <div className="flex items-center justify-between py-3">
                   <div>

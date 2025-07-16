@@ -198,6 +198,30 @@ export default function SignupPage() {
               }
             }
           }
+
+          // Step 3: Set user plan to "free" after successful profile creation
+          if (profileSaved) {
+            try {
+              const planResponse = await fetch('/api/set-user-plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  userId: data.user.id,
+                  plan: 'free'
+                })
+              });
+
+              if (!planResponse.ok) {
+                console.warn('Failed to set user plan, but signup continues:', await planResponse.text());
+                // Don't fail the signup if plan assignment fails - user can be updated later
+              } else {
+                console.log('Successfully set user plan to free');
+              }
+            } catch (planError) {
+              console.error('Error setting user plan:', planError);
+              // Don't fail the signup if plan assignment fails - user can be updated later
+            }
+          }
         } catch (profileError) {
           console.error('Error saving user profile:', profileError);
           // Don't fail the signup if profile save fails - user can update later

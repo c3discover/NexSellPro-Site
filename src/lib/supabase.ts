@@ -69,6 +69,15 @@ export interface UserProfile {
   updated_at: string;
 }
 
+// User Plan interface
+export interface UserPlan {
+  id: string;
+  user_id: string;
+  plan: 'free' | 'premium' | 'enterprise';
+  created_at: string;
+  updated_at: string;
+}
+
 // Auth status interface for checkAuthStatus function
 export interface AuthStatus {
   isAuthenticated: boolean;
@@ -503,6 +512,53 @@ export async function upsertUserProfile(profile: Omit<UserProfile, 'id' | 'creat
 export async function isAuthenticated(): Promise<boolean> {
   const user = await getCurrentUser();
   return !!user;
+}
+
+/**
+ * Get user plan from the database
+ * 
+ * Use this function when you need to:
+ * - Check user's current subscription plan
+ * - Display plan-specific features or limits
+ * - Validate plan-based permissions
+ * 
+ * @param userId - The user's ID
+ * @returns {Promise<UserPlan | null>} The user plan or null if not found
+ */
+export async function getUserPlan(userId: string): Promise<UserPlan | null> {
+  if (!isClientReady()) {
+    debugLog('Client not ready for getUserPlan');
+    return null;
+  }
+
+  if (!userId) {
+    debugLog('No userId provided to getUserPlan');
+    return null;
+  }
+
+  try {
+    debugLog(`Getting user plan for: ${userId}`);
+    
+    const { data, error } = await withRetry(async () => {
+      return await supabase
+        .from('user_plan')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+    });
+
+    if (error) {
+      debugLog('Error fetching user plan:', error);
+      return null;
+    }
+    
+    debugLog(`User plan retrieved: ${data.plan}`);
+    return data;
+    
+  } catch (error: unknown) {
+    debugLog('Unexpected error in getUserPlan:', error);
+    return null;
+  }
 }
 
 /**

@@ -120,6 +120,33 @@ export default function AuthCallback() {
     // Authentication successful for type: ${type}
     setState('confirmed');
     
+    // Get the current user session
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.user) {
+      // Insert user_plan row if one doesn't already exist
+      const { data: planRow, error: planFetchError } = await supabase
+        .from("user_plan")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .single();
+
+      if (!planRow && !planFetchError) {
+        const { error: insertError } = await supabase.from("user_plan").insert([
+          {
+            user_id: session.user.id,
+            plan: "beta", // or "free" or whatever tier you want
+          },
+        ]);
+
+        if (insertError) {
+          console.error("Failed to insert user plan:", insertError.message);
+        } else {
+          console.log("✅ User plan inserted successfully");
+        }
+      }
+    }
+    
     // Redirect based on auth type
     const redirectPath = (() => {
       switch (type) {

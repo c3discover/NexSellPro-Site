@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import HCaptcha from '@hcaptcha/react-hcaptcha';
 import { supabase, upsertUserProfile } from '@/lib/supabase';
 
 // TypeScript types for form data and errors
@@ -23,6 +24,7 @@ interface FormError {
   confirmPassword?: string;
   businessName?: string;
   howDidYouHear?: string;
+  captcha?: string;
   general?: string;
 }
 
@@ -34,6 +36,7 @@ interface SignupState {
   showPassword: boolean;
   showConfirmPassword: boolean;
   redirectCountdown: number;
+  captchaToken: string;
 }
 
 const initialForm: SignupForm = {
@@ -48,6 +51,7 @@ const initialForm: SignupForm = {
 
 export default function SignupPage() {
   const router = useRouter();
+  const captchaRef = useRef<HCaptcha>(null);
   const [form, setForm] = useState<SignupForm>(initialForm);
   const [errors, setErrors] = useState<FormError>({});
   const [state, setState] = useState<SignupState>({
@@ -56,7 +60,8 @@ export default function SignupPage() {
     resent: false,
     showPassword: false,
     showConfirmPassword: false,
-    redirectCountdown: 30
+    redirectCountdown: 30,
+    captchaToken: ''
   });
 
   // Handle automatic redirect to login after successful signup
@@ -84,8 +89,25 @@ export default function SignupPage() {
   // Clear errors when user starts typing
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
-    setErrors((prev) => ({ ...prev, [e.target.name]: undefined, general: undefined }));
+    setErrors((prev) => ({ ...prev, [e.target.name]: undefined, general: undefined, captcha: undefined }));
   }
+
+  // hCaptcha callbacks
+  const handleCaptchaVerify = (token: string) => {
+    setState(prev => ({ ...prev, captchaToken: token }));
+    setErrors(prev => ({ ...prev, captcha: undefined }));
+  };
+
+  const handleCaptchaExpire = () => {
+    setState(prev => ({ ...prev, captchaToken: '' }));
+    setErrors(prev => ({ ...prev, captcha: 'Security check expired. Please try again.' }));
+  };
+
+  const handleCaptchaError = (err: string) => {
+    setState(prev => ({ ...prev, captchaToken: '' }));
+    setErrors(prev => ({ ...prev, captcha: 'Security check failed. Please try again.' }));
+    console.error('hCaptcha error:', err);
+  };
 
   // Validate form fields with detailed explanations for each rule
   function validate(values: SignupForm): FormError {
@@ -137,6 +159,17 @@ export default function SignupPage() {
       setErrors(validation);
       return;
     }
+
+    // Check if captcha token exists, if not execute captcha
+    if (!state.captchaToken) {
+      try {
+        captchaRef.current?.execute();
+        return;
+      } catch (error) {
+        setErrors({ captcha: 'Please complete the security check.' });
+        return;
+      }
+    }
     
     setState(prev => ({ ...prev, loading: true }));
     
@@ -152,6 +185,7 @@ export default function SignupPage() {
             last_name: form.lastName,
             business_name: form.businessName,
             how_did_you_hear: form.howDidYouHear,
+            captcha_token: state.captchaToken, // Include captcha token for backend verification
           }
         },
       });
@@ -165,7 +199,7 @@ export default function SignupPage() {
         } else {
           setErrors({ general: error.message || 'Signup failed. Please try again.' });
         }
-        setState(prev => ({ ...prev, loading: false }));
+        setState(prev => ({ ...prev, loading: false, captchaToken: '' }));
         return;
       }
 
@@ -233,13 +267,14 @@ export default function SignupPage() {
         ...prev, 
         success: true, 
         loading: false,
-        redirectCountdown: 30 
+        redirectCountdown: 30,
+        captchaToken: '' // Clear captcha token after successful signup
       }));
       
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Unexpected error. Please try again.';
       setErrors({ general: errorMessage });
-      setState(prev => ({ ...prev, loading: false }));
+      setState(prev => ({ ...prev, loading: false, captchaToken: '' }));
     }
   }
 
@@ -566,7 +601,19 @@ export default function SignupPage() {
                   </select>
                   {errors.howDidYouHear && <p className="text-red-400 text-xs mt-1">{errors.howDidYouHear}</p>}
                 </div>
+
+                {/* hCaptcha Component */}
+                <HCaptcha
+                  ref={captchaRef}
+                  sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || ''}
+                  size="invisible"
+                  onVerify={handleCaptchaVerify}
+                  onExpire={handleCaptchaExpire}
+                  onError={handleCaptchaError}
+                />
                 
+                {/* Error messages */}
+                {errors.captcha && <div className="text-red-400 text-sm text-center">{errors.captcha}</div>}
                 {errors.general && <div className="text-red-500 text-sm text-center">{errors.general}</div>}
                 
                 <button

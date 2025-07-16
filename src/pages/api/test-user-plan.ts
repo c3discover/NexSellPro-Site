@@ -14,12 +14,20 @@ import { createClient } from '@supabase/supabase-js';
 ////////////////////////////////////////////////
 // Types and Interfaces:
 ////////////////////////////////////////////////
+interface UserPlanData {
+  id: string;
+  user_id: string;
+  plan: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface TestUserPlanResponse {
   success: boolean;
   data?: {
-    userPlans: any[];
+    userPlans: UserPlanData[];
     totalCount: number;
-    samplePlan?: any;
+    samplePlan?: UserPlanData;
   };
   error?: string;
 }

@@ -21,7 +21,11 @@ interface SetUserPlanRequest {
 
 interface SetUserPlanResponse {
   success: boolean;
-  data?: any;
+  data?: {
+    userId: string;
+    plan: string;
+    updatedAt: string;
+  };
   error?: string;
 }
 
@@ -40,16 +44,18 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
  * @param body - The request body to validate
  * @returns Validation result with errors if any
  */
-function validateRequest(body: any): { isValid: boolean; errors: string[] } {
+function validateRequest(body: unknown): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  if (!body.userId || typeof body.userId !== 'string') {
+  const bodyObj = body as Record<string, unknown>;
+  
+  if (!bodyObj.userId || typeof bodyObj.userId !== 'string') {
     errors.push('userId is required and must be a string');
   }
 
-  if (!body.plan || typeof body.plan !== 'string') {
+  if (!bodyObj.plan || typeof bodyObj.plan !== 'string') {
     errors.push('plan is required and must be a string');
-  } else if (!VALID_PLANS.includes(body.plan as any)) {
+  } else if (!VALID_PLANS.includes(bodyObj.plan as 'free' | 'premium' | 'enterprise')) {
     errors.push(`plan must be one of: ${VALID_PLANS.join(', ')}`);
   }
 

@@ -606,7 +606,7 @@ export default function SignupPage() {
                 <HCaptcha
                   ref={captchaRef}
                   sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || ''}
-                  size="invisible"
+                  size="normal"
                   onVerify={handleCaptchaVerify}
                   onExpire={handleCaptchaExpire}
                   onError={handleCaptchaError}

@@ -1,8 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import Stripe from "stripe";
+import { headers } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
-
-export const runtime = "edge";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-06-30.basil",
@@ -10,63 +9,42 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // You need Service Role key to write to DB
 );
 
-export async function POST(req: Request) {
-  const sig = req.headers.get("stripe-signature")!;
+export async function POST(req: NextRequest) {
   const body = await req.text();
+  const headersList = await headers();
+  const sig = headersList.get("stripe-signature")!;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
-  } catch (err) {
-    console.error("⚠️ Webhook signature verification failed.", err);
-    return new NextResponse("Webhook Error", { status: 400 });
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+  } catch (err: any) {
+    console.error("Webhook Error:", err.message);
+    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-
     const email = session.customer_details?.email;
-    if (!email) {
-      console.error("⚠️ Missing email in checkout session.");
-      return new NextResponse("Missing email", { status: 400 });
-    }
 
-    const { data: user, error } = await supabase
-      .from("users") // double check this matches your user table
-      .select("id")
-      .eq("email", email)
-      .single();
-
-    if (error || !user) {
-      console.error("❌ Could not find user with email:", email, error);
-      return new NextResponse("User not found", { status: 404 });
-    }
-
-    const { error: upsertError } = await supabase
-      .from("user_plan")
-      .upsert(
+    if (email) {
+      const { error } = await supabase.from("user_plan").insert([
         {
-          user_id: user.id,
-          plan: "beta",
+          user_id: session.client_reference_id || crypto.randomUUID(),
+          plan: "founding_member",
         },
-        { onConflict: "user_id" }
-      );
+      ]);
 
-    if (upsertError) {
-      console.error("❌ Failed to upsert plan:", upsertError);
-      return new NextResponse("Database error", { status: 500 });
+      if (error) {
+        console.error("Supabase insert error:", error.message);
+        return new Response("Error saving user to Supabase", { status: 500 });
+      }
     }
-
-    console.log(`✅ Beta plan activated for ${email}`);
   }
 
-  return new NextResponse("Success", { status: 200 });
+  return new Response("Webhook received", { status: 200 });
 }

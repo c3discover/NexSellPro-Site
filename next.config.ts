@@ -13,9 +13,8 @@ const nextConfig: NextConfig = {
   // Enable source maps only in development for security (prevents exposing source code in production)
   productionBrowserSourceMaps: process.env.NODE_ENV === 'development',
   
-  // Enable SWC minification for faster builds and smaller bundle sizes
+  // SWC minification is enabled by default in Next.js 15+
   // SWC is a Rust-based compiler that's much faster than Terser
-  swcMinify: true,
   
   // Disable TypeScript type checking during build for faster builds
   // You can run type checking separately with: npx tsc --noEmit

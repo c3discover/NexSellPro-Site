@@ -4,13 +4,6 @@ import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
 import { ensureSessionPersistence, getSessionInfo } from '@/lib/auth-helpers';
 
-// Production redirect - remove debug pages from production builds
-if (process.env.NODE_ENV === 'production') {
-  // This will be executed at build time in production
-  // The page will not be included in the production bundle
-  return null;
-}
-
 /**
  * Authentication Debug Page
  * 
@@ -76,7 +69,7 @@ interface ClientSessionInfo {
   timeUntilExpiry?: number;
 }
 
-export default function DebugAuthPage() {
+function DebugAuthPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [clientSession, setClientSession] = useState<ClientSessionInfo | null>(null);
@@ -642,4 +635,7 @@ export default function DebugAuthPage() {
       </div>
     </>
   );
-} 
+}
+
+// Production redirect - remove debug pages from production builds
+export default process.env.NODE_ENV === 'production' ? null : DebugAuthPage;

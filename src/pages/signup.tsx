@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import HCaptcha from '@hcaptcha/react-hcaptcha';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { supabase, upsertUserProfile } from '@/lib/supabase';
 
 // TypeScript types for form data and errors
@@ -51,7 +51,7 @@ const initialForm: SignupForm = {
 
 export default function SignupPage() {
   const router = useRouter();
-  const captchaRef = useRef<HCaptcha>(null);
+  const captchaRef = useRef<ReCAPTCHA>(null);
   const [form, setForm] = useState<SignupForm>(initialForm);
   const [errors, setErrors] = useState<FormError>({});
   const [state, setState] = useState<SignupState>({
@@ -92,10 +92,16 @@ export default function SignupPage() {
     setErrors((prev) => ({ ...prev, [e.target.name]: undefined, general: undefined, captcha: undefined }));
   }
 
-  // hCaptcha callbacks
-  const handleCaptchaVerify = (token: string) => {
-    setState(prev => ({ ...prev, captchaToken: token }));
-    setErrors(prev => ({ ...prev, captcha: undefined }));
+  // Google reCAPTCHA callbacks
+  const handleCaptchaVerify = (token: string | null) => {
+    if (token) {
+      console.log("reCAPTCHA passed:", token);
+      setState(prev => ({ ...prev, captchaToken: token }));
+      setErrors(prev => ({ ...prev, captcha: undefined }));
+    } else {
+      setState(prev => ({ ...prev, captchaToken: '' }));
+      setErrors(prev => ({ ...prev, captcha: 'Please complete the security check.' }));
+    }
   };
 
   const handleCaptchaExpire = () => {
@@ -103,10 +109,10 @@ export default function SignupPage() {
     setErrors(prev => ({ ...prev, captcha: 'Security check expired. Please try again.' }));
   };
 
-  const handleCaptchaError = (err: string) => {
+  const handleCaptchaError = () => {
     setState(prev => ({ ...prev, captchaToken: '' }));
     setErrors(prev => ({ ...prev, captcha: 'Security check failed. Please try again.' }));
-    console.error('hCaptcha error:', err);
+    console.error('reCAPTCHA error occurred');
   };
 
   // Validate form fields with detailed explanations for each rule
@@ -160,15 +166,10 @@ export default function SignupPage() {
       return;
     }
 
-    // Check if captcha token exists, if not execute captcha
+    // Check if captcha token exists
     if (!state.captchaToken) {
-      try {
-        captchaRef.current?.execute();
-        return;
-      } catch {
-        setErrors({ captcha: 'Please complete the security check.' });
-        return;
-      }
+      setErrors({ captcha: 'Please complete the security check.' });
+      return;
     }
     
     setState(prev => ({ ...prev, loading: true }));
@@ -602,13 +603,12 @@ export default function SignupPage() {
                   {errors.howDidYouHear && <p className="text-red-400 text-xs mt-1">{errors.howDidYouHear}</p>}
                 </div>
 
-                {/* hCaptcha Component */}
-                <HCaptcha
+                {/* Google reCAPTCHA Component */}
+                <ReCAPTCHA
                   ref={captchaRef}
-                  sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || ''}
-                  size="normal"
-                  onVerify={handleCaptchaVerify}
-                  onExpire={handleCaptchaExpire}
+                  sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                  onChange={handleCaptchaVerify}
+                  onExpired={handleCaptchaExpire}
                   onError={handleCaptchaError}
                 />
                 

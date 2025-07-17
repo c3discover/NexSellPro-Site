@@ -52,6 +52,10 @@ const initialForm: SignupForm = {
 export default function SignupPage() {
   const router = useRouter();
   const captchaRef = useRef<ReCAPTCHA>(null);
+  
+  // Log the reCAPTCHA site key for debugging
+  console.log("RECAPTCHA KEY:", process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
+  
   const [form, setForm] = useState<SignupForm>(initialForm);
   const [errors, setErrors] = useState<FormError>({});
   const [state, setState] = useState<SignupState>({

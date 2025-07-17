@@ -20,7 +20,7 @@ import { ensureSessionPersistence, getSessionInfo } from '@/lib/auth-helpers';
  * 3. Use debug buttons to test operations
  * 4. Check console for detailed logs
  * 
- * Note: This page is not available in production builds
+ * Note: This page redirects to home in production builds
  */
 
 interface ServerAuthStatus {
@@ -69,8 +69,29 @@ interface ClientSessionInfo {
   timeUntilExpiry?: number;
 }
 
-function DebugAuthPage() {
+export default function DebugAuthPage() {
   const router = useRouter();
+
+  // Production redirect
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') {
+      router.replace('/');
+      return;
+    }
+  }, [router]);
+
+  // Show loading in production while redirecting
+  if (process.env.NODE_ENV === 'production') {
+    return (
+      <div className="min-h-screen bg-neutral-dark text-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Redirecting...</h1>
+          <p className="text-gray-400">This page is not available in production.</p>
+        </div>
+      </div>
+    );
+  }
+
   const [loading, setLoading] = useState(true);
   const [clientSession, setClientSession] = useState<ClientSessionInfo | null>(null);
   const [serverAuth, setServerAuth] = useState<ServerAuthStatus | null>(null);
@@ -636,6 +657,3 @@ function DebugAuthPage() {
     </>
   );
 }
-
-// Production redirect - remove debug pages from production builds
-export default process.env.NODE_ENV === 'production' ? null : DebugAuthPage;

@@ -44,9 +44,7 @@ export default function AuthCallback() {
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const queryParams = new URLSearchParams(window.location.search);
     
-    console.log('[Auth Callback] URL:', window.location.href);
-    console.log('[Auth Callback] Hash params:', Object.fromEntries(hashParams.entries()));
-    console.log('[Auth Callback] Query params:', Object.fromEntries(queryParams.entries()));
+
     
     // Check for errors first
     const errorParam = hashParams.get('error') || queryParams.get('error');
@@ -73,7 +71,7 @@ export default function AuthCallback() {
       authType = 'magic_link';
     }
 
-    console.log('[Auth Callback] Auth type detected:', authType);
+
     return { type: authType, hasError: false, errorMessage: null };
   };
 
@@ -82,16 +80,11 @@ export default function AuthCallback() {
     try {
       // First, try to get the current session
       const { data: { session: currentSession } } = await supabase.auth.getSession();
-      console.log('[Auth Callback] Current session exists?', !!currentSession);
-      
       if (currentSession) {
-        console.log('[Auth Callback] User:', currentSession.user.email);
-        console.log('[Auth Callback] Expires:', new Date((currentSession.expires_at || 0) * 1000));
         return true;
       }
 
       // If no session, try to refresh to establish one
-      console.log('[Auth Callback] No session found, attempting refresh...');
       const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
       
       if (refreshError) {
@@ -100,13 +93,11 @@ export default function AuthCallback() {
       }
 
       if (refreshedSession) {
-        console.log('[Auth Callback] Session established via refresh');
         return true;
       }
 
       // Final attempt: check if session was established via URL processing
       const { data: { session: finalSession } } = await supabase.auth.getSession();
-      console.log('[Auth Callback] Final session check:', !!finalSession);
       
       return !!finalSession;
     } catch (error) {
@@ -145,7 +136,7 @@ export default function AuthCallback() {
           if (insertError) {
             console.error("Insert failed:", insertError.message);
           } else {
-            console.log("✅ user_plan inserted");
+    
           }
         }
       }
@@ -221,7 +212,7 @@ export default function AuthCallback() {
       // Check if user is already authenticated
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        console.log('[Auth Callback] User already authenticated, redirecting to dashboard');
+  
         handleSuccess('signup');
         return;
       } else {
@@ -232,9 +223,7 @@ export default function AuthCallback() {
     }
 
     // Give Supabase time to process URL tokens (reduced from 2000ms to 1000ms)
-    console.log('[Auth Callback] Waiting for Supabase to process URL tokens...');
     await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log('[Auth Callback] Starting session establishment...');
 
     // Set up maximum wait time
     timeoutRef.current = setTimeout(() => {
@@ -258,7 +247,7 @@ export default function AuthCallback() {
       retryCountRef.current++;
       
       if (retryCountRef.current < maxRetries) {
-        console.log(`[Auth Callback] Retry attempt ${retryCountRef.current}/${maxRetries}`);
+
         // Shorter retry intervals (1 second instead of 2)
         setTimeout(attemptSessionEstablishment, 1000);
       } else {

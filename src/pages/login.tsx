@@ -241,16 +241,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Log session details for debugging
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Login] Authentication successful:', {
-          userId: data.user.id,
-          email: data.user.email,
-          sessionExpiresAt: data.session.expires_at,
-          accessTokenPreview: data.session.access_token ? data.session.access_token.substring(0, 20) + '...' : 'Missing',
-          refreshTokenPresent: !!data.session.refresh_token
-        });
-      }
+
 
       // Step 3: Simple success path - trust Supabase session and redirect
       setLoadingState('redirecting');
@@ -463,28 +454,7 @@ export default function LoginPage() {
             <Link href="/signup" className="text-accent hover:underline hover-underline">Sign up</Link>
           </div>
           
-          {/* Debug section - only show in development */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-4 pt-4 border-t border-slate-700">
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    const response = await fetch('/api/auth-test');
-                    const data = await response.json();
-                    console.log('[Debug] Auth status:', data);
-                    alert(`Auth Status: ${JSON.stringify(data, null, 2)}`);
-                  } catch (error) {
-                    console.error('[Debug] Auth test failed:', error);
-                    alert('Auth test failed');
-                  }
-                }}
-                className="text-xs text-gray-500 hover:text-gray-400 underline"
-              >
-                Debug: Check Auth Status
-              </button>
-            </div>
-          )}
+
         </div>
       </div>
     </LoginErrorBoundary>

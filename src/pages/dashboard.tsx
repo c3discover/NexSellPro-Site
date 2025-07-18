@@ -22,7 +22,7 @@ export default function DashboardPage() {
         
         if (!authStatus.isAuthenticated || !authStatus.user) {
           // No valid session, redirect to login
-          console.log('No valid session found, redirecting to login');
+  
           router.replace('/login');
           return;
         }

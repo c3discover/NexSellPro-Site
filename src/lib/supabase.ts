@@ -97,7 +97,7 @@ export interface AuthStatus {
  */
 function debugLog(message: string, data?: unknown): void {
   if (DEBUG) {
-    console.log(`[Supabase Auth] ${message}`, data || '');
+  
   }
 }
 

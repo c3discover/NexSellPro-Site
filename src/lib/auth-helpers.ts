@@ -65,7 +65,7 @@ export interface SessionPersistenceResult {
  */
 function debugLog(message: string, data?: unknown): void {
   if (DEBUG) {
-    console.log(`[Auth Helpers] ${message}`, data || '');
+  
   }
 }
 

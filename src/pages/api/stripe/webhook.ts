@@ -22,15 +22,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 // ============================================
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.log('🚀 WEBHOOK CALLED AT:', new Date().toISOString());
+
 
   // Only accept POST requests
   if (req.method !== 'POST') {
-    console.log('❌ Non-POST request rejected');
+
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  console.log('🚀 Webhook received');
+
 
   // ============================================
   // STEP 1: Read the raw body (required by Stripe)
@@ -54,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sig, 
       process.env.STRIPE_WEBHOOK_SECRET!
     );
-    console.log('✅ Webhook verified:', event.type);
+
   } catch (err: any) {
     console.error('❌ Webhook verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -86,8 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    console.log('📧 Processing payment for:', email);
-    console.log('👤 Customer name:', customerName);
+
 
     // ============================================
     // STEP 5: Initialize Supabase Admin Client
@@ -107,7 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // ============================================
       // STEP 6: Check if user already exists in auth.users
       // ============================================
-      console.log('🔍 Checking if user exists in auth.users...');
+  
       
       let existingAuthUser = null;
       let listError = null;
@@ -125,11 +124,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           existingAuthUser = users.find((user: any) => user.email === email);
         }
         
-        console.log('📊 Auth users query response:', {
-          totalUsers: users?.length || 0,
-          foundUser: !!existingAuthUser,
-          error: listError?.message || 'none'
-        });
+
       } catch (queryError) {
         console.error('💥 Auth users query threw exception:', queryError);
         listError = queryError;
@@ -148,10 +143,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // ============================================
         // CASE 1: User exists in auth - check/update user_plan
         // ============================================
-        console.log('👤 User exists in auth, checking user_plan...', {
-          userId: existingAuthUser.id,
-          email: existingAuthUser.email
-        });
+
         
         // Check if user has a plan record
         const { data: existingPlan, error: planError } = await supabaseAdmin
@@ -180,7 +172,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             throw updateError;
           }
 
-          console.log('✅ Existing user plan updated to premium');
+
         } else {
           // Insert new plan record
           const { error: insertError } = await supabaseAdmin
@@ -195,14 +187,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             throw insertError;
           }
 
-          console.log('✅ Added user plan record for existing auth user');
+
         }
         
               } else {
           // ============================================
           // CASE 2: New user - create auth user first
           // ============================================
-          console.log('🆕 Creating new user...');
+
           
           // Generate a secure temporary password
           const tempPassword = generateSecurePassword();
@@ -226,7 +218,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
           if (authData?.user) {
             // New user created successfully
-            console.log('✅ Auth user created:', authData.user.id);
+
             
             // Insert into user_plan table
             const { error: insertError } = await supabaseAdmin
@@ -241,14 +233,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               throw insertError;
             }
 
-            console.log('✅ User added to user_plan table');
+
             
             // Send password reset email for new users
             await sendPasswordResetEmail(supabaseAdmin, email);
           }
         }
 
-      console.log('🎉 Webhook processing completed successfully');
+
       
     } catch (error) {
       console.error('❌ Fatal error in webhook:', error);
@@ -289,7 +281,7 @@ function generateSecurePassword(): string {
  * Send password reset email with retry logic
  */
 async function sendPasswordResetEmail(supabaseAdmin: any, email: string): Promise<void> {
-  console.log('📨 Sending password reset email...');
+
   
   try {
     // Note: resetPasswordForEmail uses the PUBLIC client methods
@@ -302,7 +294,6 @@ async function sendPasswordResetEmail(supabaseAdmin: any, email: string): Promis
       console.error('❌ Error sending reset email:', error);
       
       // Retry once after a delay
-      console.log('🔄 Retrying email send...');
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       const { error: retryError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
@@ -315,7 +306,7 @@ async function sendPasswordResetEmail(supabaseAdmin: any, email: string): Promis
       }
     }
 
-    console.log('✅ Password reset email sent successfully');
+
   } catch (error) {
     console.error('❌ Failed to send password reset email:', error);
     // Don't throw - payment was successful, this is a secondary action

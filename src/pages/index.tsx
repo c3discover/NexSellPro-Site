@@ -138,7 +138,6 @@ function HeroSection() {
       window.location.href = url;
       
     } catch (error) {
-      console.error('Error creating checkout session:', error);
       // Fallback to signup if there's an error
       router.push("/signup");
     }
@@ -403,7 +402,6 @@ function PricingSection() {
       window.location.href = url;
       
     } catch (error) {
-      console.error('Error creating checkout session:', error);
       // Fallback to signup if there's an error
       router.push("/signup");
     }
@@ -626,7 +624,6 @@ function FooterSection() {
       window.location.href = url;
       
     } catch (error) {
-      console.error('Error creating checkout session:', error);
       // Fallback to signup if there's an error
       router.push("/signup");
     }

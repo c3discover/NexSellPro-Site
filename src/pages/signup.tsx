@@ -54,7 +54,7 @@ export default function SignupPage() {
   const captchaRef = useRef<ReCAPTCHA>(null);
   
   // Log the reCAPTCHA site key for debugging
-  console.log("RECAPTCHA KEY:", process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
+
   
   const [form, setForm] = useState<SignupForm>(initialForm);
   const [errors, setErrors] = useState<FormError>({});
@@ -99,7 +99,7 @@ export default function SignupPage() {
   // Google reCAPTCHA callbacks
   const handleCaptchaVerify = (token: string | null) => {
     if (token) {
-      console.log("reCAPTCHA passed:", token);
+  
       setState(prev => ({ ...prev, captchaToken: token }));
       setErrors(prev => ({ ...prev, captcha: undefined }));
     } else {
@@ -228,7 +228,7 @@ export default function SignupPage() {
             console.error('Error inserting user profile:', profileError);
             // Don't fail the signup if profile save fails - user can update later
           } else {
-            console.log('✅ User profile saved successfully');
+    
           }
 
           // Insert user into user_plan table
@@ -243,7 +243,7 @@ export default function SignupPage() {
             console.error('Error inserting user plan:', planError);
             // Don't fail the signup if plan assignment fails - user can be updated later
           } else {
-            console.log('✅ User plan set to free successfully');
+    
           }
         } catch (error) {
           console.error('Error saving user data:', error);
@@ -396,33 +396,7 @@ export default function SignupPage() {
             </div>
           ) : (
             <>
-              {/* Debug section - only show in development */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="mb-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700">
-                  <div className="text-xs text-gray-400 mb-2">Debug Info:</div>
-                  <div className="space-y-1 text-xs">
-                    <div>Origin: {typeof window !== 'undefined' ? window.location.origin : 'SSR'}</div>
-                    <div>Redirect URL: {typeof window !== 'undefined' ? `${window.location.origin}/auth/callback?type=signup` : 'SSR'}</div>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          const response = await fetch('/api/supabase-config');
-                          const data = await response.json();
-                          console.log('[Debug] Supabase config:', data);
-                          alert(`Supabase Config: ${JSON.stringify(data, null, 2)}`);
-                        } catch (error) {
-                          console.error('[Debug] Config check failed:', error);
-                          alert('Config check failed');
-                        }
-                      }}
-                      className="text-xs text-accent hover:underline"
-                    >
-                      Check Supabase Config
-                    </button>
-                  </div>
-                </div>
-              )}
+
               <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Name Fields */}
                 <div className="grid grid-cols-2 gap-4">

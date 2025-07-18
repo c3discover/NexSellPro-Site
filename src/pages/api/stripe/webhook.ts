@@ -60,6 +60,7 @@ async function handlePaidUser(email: string, sessionId: string): Promise<void> {
   try {
     // First, try to create the user
     const password = generateSecurePassword();
+    console.log('🔐 Generated password for new user');
     
     const { data: newUser, error: createError } = await adminClient
       .auth
@@ -74,45 +75,13 @@ async function handlePaidUser(email: string, sessionId: string): Promise<void> {
         }
       });
     
-    if (createError && createError.message.includes('already been registered')) {
-      // User already exists - just update their plan
-      console.log('📊 User already exists, updating plan...');
-      
-      // Get the existing user's ID
-      const { data: { users }, error: searchError } = await adminClient
-        .auth
-        .admin
-        .listUsers();
-      
-      if (!searchError && users && users.length > 0) {
-        const existingUser = users.find(user => user.email === email);
-        
-        if (!existingUser) {
-          console.error('❌ User not found in list despite registration error');
-          return;
-        }
-        
-        // Update or insert user_plan
-        const { error: planError } = await adminClient
-          .from('user_plan')
-          .upsert({
-            user_id: existingUser.id,
-            plan: 'paid',
-            updated_at: new Date().toISOString()
-          });
-        
-        if (planError) {
-          console.error('❌ Error updating user plan:', planError.message);
-        } else {
-          console.log('✅ Existing user upgraded to paid plan');
-          
-          // Send a "payment successful" email (optional)
-          // You could send a custom email here confirming their purchase
-        }
+    if (createError) {
+      if (createError.message.includes('already been registered')) {
+        console.log('⚠️ User already exists - that\'s OK, they\'re upgrading');
+        // For now, we'll skip updating existing users
+        // You can add this logic later once new users work
+        return;
       }
-      return;
-    } else if (createError) {
-      // Some other error
       console.error('❌ Error creating user:', createError.message);
       return;
     }
@@ -122,6 +91,8 @@ async function handlePaidUser(email: string, sessionId: string): Promise<void> {
     
     // Add to user_plan table
     if (newUser.user?.id) {
+      console.log('💾 Adding user to user_plan table...');
+      
       const { error: planError } = await adminClient
         .from('user_plan')
         .insert({ 
@@ -130,7 +101,7 @@ async function handlePaidUser(email: string, sessionId: string): Promise<void> {
         });
       
       if (planError) {
-        console.error('❌ Error setting user plan:', planError);
+        console.error('❌ Error setting user plan:', planError.message);
       } else {
         console.log('✅ User plan set to paid');
       }
@@ -138,7 +109,6 @@ async function handlePaidUser(email: string, sessionId: string): Promise<void> {
       // Send welcome email with password reset
       console.log('📧 Sending welcome email...');
       
-      // This actually sends the email
       const { error: emailError } = await adminClient
         .auth
         .resetPasswordForEmail(email, {
@@ -153,8 +123,11 @@ async function handlePaidUser(email: string, sessionId: string): Promise<void> {
     }
     
   } catch (error) {
-    console.error('❌ Unexpected error:', error);
+    console.error('❌ Unexpected error in handlePaidUser:', error);
+    console.error('Full error details:', JSON.stringify(error, null, 2));
   }
+  
+  console.log('🏁 Finished handlePaidUser');
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

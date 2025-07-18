@@ -190,13 +190,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const session = event.data.object as Stripe.Checkout.Session;
     console.log('✅ Payment completed for:', session.customer_email);
     
-    // Get customer email from the Stripe session
-    const customerEmail = session.customer_email;
-    
+    // Get customer email from multiple possible locations
+    const customerEmail = session.customer_email || 
+                         session.customer_details?.email || 
+                         null;
+
+    // Add detailed logging to debug
+    console.log('📧 Checking for customer email...');
+    console.log('- session.customer_email:', session.customer_email);
+    console.log('- session.customer_details?.email:', session.customer_details?.email);
+    console.log('- session.customer:', session.customer);
+
     if (!customerEmail) {
       console.error('❌ No customer email found in session');
+      console.log('📋 Full session data:', JSON.stringify(session, null, 2));
       return;
     }
+
+    console.log('✅ Found customer email:', customerEmail);
     
     // Handle user creation/upgrade with Supabase
     console.log('🎯 Processing user for email:', customerEmail);

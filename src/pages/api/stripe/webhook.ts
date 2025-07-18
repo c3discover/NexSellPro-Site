@@ -53,7 +53,20 @@ function generateSecurePassword(): string {
  * @param sessionId - Stripe session ID for tracking
  */
 async function handlePaidUser(email: string, sessionId: string): Promise<void> {
+  console.log('📋 Starting handlePaidUser for:', email);
+  
+  // Validate environment variables first
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('❌ CRITICAL: Missing Supabase environment variables');
+    console.error('- SUPABASE_URL:', !!SUPABASE_URL);
+    console.error('- SUPABASE_SERVICE_ROLE_KEY:', !!SUPABASE_SERVICE_ROLE_KEY);
+    return;
+  }
+  
+  console.log('✅ Environment variables present');
+  
   const adminClient = createSupabaseAdmin();
+  console.log('✅ Admin client created');
   
   try {
     // Check if user already exists
@@ -63,6 +76,10 @@ async function handlePaidUser(email: string, sessionId: string): Promise<void> {
       .auth
       .admin
       .listUsers();
+    
+    console.log('📊 User search complete');
+    console.log('- Total users found:', existingUsers?.users?.length || 0);
+    console.log('- Search error:', searchError?.message || 'none');
     
     if (searchError) {
       console.error('❌ Error searching for user:', searchError);
@@ -187,30 +204,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Custom logic after response
   if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session;
-    console.log('✅ Payment completed for:', session.customer_email);
-    
-    // Get customer email from multiple possible locations
-    const customerEmail = session.customer_email || 
-                         session.customer_details?.email || 
-                         null;
+    try {
+      const session = event.data.object as Stripe.Checkout.Session;
+      console.log('✅ Payment completed for:', session.customer_email);
+      
+      // Get customer email from multiple possible locations
+      const customerEmail = session.customer_email || 
+                           session.customer_details?.email || 
+                           null;
 
-    // Add detailed logging to debug
-    console.log('📧 Checking for customer email...');
-    console.log('- session.customer_email:', session.customer_email);
-    console.log('- session.customer_details?.email:', session.customer_details?.email);
-    console.log('- session.customer:', session.customer);
+      // Add detailed logging to debug
+      console.log('📧 Checking for customer email...');
+      console.log('- session.customer_email:', session.customer_email);
+      console.log('- session.customer_details?.email:', session.customer_details?.email);
+      console.log('- session.customer:', session.customer);
 
-    if (!customerEmail) {
-      console.error('❌ No customer email found in session');
-      console.log('📋 Full session data:', JSON.stringify(session, null, 2));
-      return;
+      if (!customerEmail) {
+        console.error('❌ No customer email found in session');
+        console.log('📋 Full session data:', JSON.stringify(session, null, 2));
+        return;
+      }
+
+      console.log('✅ Found customer email:', customerEmail);
+      
+      // Handle user creation/upgrade with Supabase
+      console.log('🎯 Processing user for email:', customerEmail);
+      await handlePaidUser(customerEmail, session.id);
+    } catch (error) {
+      console.error('❌ CRITICAL ERROR in webhook handler:', error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
     }
-
-    console.log('✅ Found customer email:', customerEmail);
-    
-    // Handle user creation/upgrade with Supabase
-    console.log('🎯 Processing user for email:', customerEmail);
-    await handlePaidUser(customerEmail, session.id);
   }
 }

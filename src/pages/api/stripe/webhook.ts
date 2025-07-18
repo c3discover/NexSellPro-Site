@@ -8,9 +8,21 @@ export const config = {
   },
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-06-30.basil', // Match the webhook API version
-})
+// Switch based on environment
+const isTestMode = process.env.NODE_ENV !== 'production'
+
+const stripe = new Stripe(
+  isTestMode
+    ? process.env.TEST_STRIPE_SECRET_KEY!
+    : process.env.STRIPE_SECRET_KEY!,
+  {
+    apiVersion: '2025-06-30.basil',
+  }
+)
+
+const webhookSecret = isTestMode
+  ? process.env.TEST_STRIPE_WEBHOOK_SECRET!
+  : process.env.STRIPE_WEBHOOK_SECRET!
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -28,13 +40,9 @@ const webhookHandler = async (req: any, res: any) => {
   let event: Stripe.Event
 
   try {
-    event = stripe.webhooks.constructEvent(
-      buf,
-      sig!,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    )
+    event = stripe.webhooks.constructEvent(buf, sig!, webhookSecret)
   } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message)
+    console.error('❌ Webhook verification failed:', err.message)
     return res.status(400).send(`Webhook Error: ${err.message}`)
   }
 
@@ -44,16 +52,14 @@ const webhookHandler = async (req: any, res: any) => {
     const stripeCustomerId = session.customer as string
 
     if (!customerEmail || !stripeCustomerId) {
-      console.warn('Missing email or customer ID from session')
-      return res.status(400).send('Invalid session payload')
+      console.warn('⚠️ Missing email or customer ID in session')
+      return res.status(400).send('Missing required session data')
     }
 
-    // Create user_plan row if not exists
     const { data, error } = await supabase
       .from('user_plan')
       .upsert(
         {
-          id: stripeCustomerId, // TEMPORARY: replace with Supabase UID later if known
           email: customerEmail,
           plan: 'beta',
           stripe_customer_id: stripeCustomerId,
@@ -62,11 +68,11 @@ const webhookHandler = async (req: any, res: any) => {
       )
 
     if (error) {
-      console.error('Supabase upsert error:', error)
+      console.error('❌ Supabase upsert error:', error)
       return res.status(500).send('Database error')
     }
 
-    console.log('✅ user_plan row updated:', data)
+    console.log('✅ user_plan updated:', data)
   }
 
   res.status(200).json({ received: true })

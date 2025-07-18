@@ -1,11 +1,19 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
+import { buffer } from 'micro';
 
+// Initialize Stripe with the correct API version
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-06-30.basil',
+  apiVersion: '2025-06-30.basil', // Use current stable version
 });
 
-// This is the key change - use default export with NextApiRequest/NextApiResponse
+// CRITICAL: Disable body parsing - Next.js must NOT parse the body
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -16,46 +24,73 @@ export default async function handler(
     return res.status(405).end('Method Not Allowed');
   }
 
+  // Get the signature from headers
   const sig = req.headers['stripe-signature'];
 
   if (!sig) {
+    console.error('Missing stripe-signature header');
     return res.status(400).json({ error: 'Missing stripe-signature header' });
   }
 
   let event: Stripe.Event;
 
   try {
-    // Important: Use req.body as a string/buffer for Stripe verification
-    const body = JSON.stringify(req.body);
+    // IMPORTANT: Get the raw body as a buffer
+    const buf = await buffer(req);
+    const rawBody = buf.toString('utf8');
+    
+    // Construct the event using the raw body and signature
     event = stripe.webhooks.constructEvent(
-      body,
+      rawBody,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
   } catch (err: any) {
-    console.error(`Webhook Error: ${err.message}`);
+    console.error(`Webhook signature verification failed:`, err.message);
     return res.status(400).json({ error: `Webhook Error: ${err.message}` });
   }
 
+  // Log successful verification
+  console.log('✅ Webhook verified, processing event:', event.type);
+
   // Handle the event
-  switch (event.type) {
-    case 'checkout.session.completed':
-      const session = event.data.object as Stripe.Checkout.Session;
-      // TODO: Fulfill the purchase, update database, etc.
-      console.log('Checkout session completed:', session.id);
-      break;
-    
-    default:
-      console.log(`Unhandled event type ${event.type}`);
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed':
+        const session = event.data.object as Stripe.Checkout.Session;
+        
+        // Log the successful checkout
+        console.log('💰 Checkout completed!');
+        console.log('Session ID:', session.id);
+        console.log('Customer Email:', session.customer_email);
+        console.log('Payment Status:', session.payment_status);
+        
+        // TODO: Add your business logic here
+        // - Save to database
+        // - Send welcome email
+        // - Grant access to product
+        // - etc.
+        
+        break;
+      
+      case 'payment_intent.succeeded':
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        console.log('💳 Payment succeeded:', paymentIntent.id);
+        break;
+      
+      case 'payment_intent.payment_failed':
+        const failedPayment = event.data.object as Stripe.PaymentIntent;
+        console.log('❌ Payment failed:', failedPayment.id);
+        break;
+      
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    // Still return 200 to acknowledge receipt
   }
 
-  // Return a 200 response to acknowledge receipt of the event
+  // Always return 200 to acknowledge receipt of the event
   res.status(200).json({ received: true });
 }
-
-// CRITICAL: Disable body parsing for webhooks
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};

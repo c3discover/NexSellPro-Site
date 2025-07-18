@@ -107,14 +107,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // ============================================
       console.log('🔍 Checking if user exists...');
       
-      const { data: existingUsers, error: fetchError } = await supabaseAdmin
-        .from('user_plan')
-        .select('user_id, email, plan, first_name, last_name')
-        .eq('email', email);
+      console.log('🔍 About to query user_plan table...');
+      let existingUsers = null;
+      let fetchError = null;
+
+      try {
+        const response = await supabaseAdmin
+          .from('user_plan')
+          .select('user_id, email, plan, first_name, last_name')
+          .eq('email', email);
+        
+        existingUsers = response.data;
+        fetchError = response.error;
+        
+        console.log('📊 Query response:', {
+          hasData: !!existingUsers,
+          dataLength: existingUsers?.length || 0,
+          error: fetchError?.message || 'none'
+        });
+      } catch (queryError) {
+        console.error('💥 Query threw exception:', queryError);
+        fetchError = queryError;
+      }
 
       if (fetchError) {
-        console.error('❌ Error checking existing user:', fetchError);
-        // Continue anyway - we'll try to create/update
+        console.error('❌ Error checking existing user:', {
+          message: (fetchError as any).message,
+          details: (fetchError as any).details,
+          hint: (fetchError as any).hint,
+          code: (fetchError as any).code
+        });
       }
 
       const existingUser = existingUsers?.[0];

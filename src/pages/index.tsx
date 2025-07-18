@@ -12,6 +12,8 @@ import React from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 ////////////////////////////////////////////////
 // Types and Interfaces:
@@ -73,7 +75,7 @@ export default function HomePage() {
 ////////////////////////////////////////////////
 // State and Hooks:
 ////////////////////////////////////////////////
-// No state management needed for this static page
+// No state management needed for this page
 
 ////////////////////////////////////////////////
 // Data Fetching:
@@ -99,6 +101,49 @@ export default function HomePage() {
  * Hero Section - The first thing visitors see
  */
 function HeroSection() {
+  const router = useRouter();
+  const supabase = createClientComponentClient();
+
+  const handleStripeCheckout = async () => {
+    try {
+      // Get current user
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (error || !user) {
+        // No user, redirect to signup
+        router.push("/signup");
+        return;
+      }
+      
+      // User exists, create checkout session
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user.email,
+          uid: user.id,
+          name: user.user_metadata.full_name || "N/A"
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+      
+      const { url } = await response.json();
+      
+      // Redirect to Stripe checkout
+      window.location.href = url;
+      
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      // Fallback to signup if there's an error
+      router.push("/signup");
+    }
+  };
+
   return (
     <section id="hero" className="bg-gradient-to-b from-slate-50 to-white px-4 py-16 md:py-24 scroll-mt-28">
       <div className="container mx-auto max-w-4xl text-center">
@@ -119,12 +164,12 @@ function HeroSection() {
           >
             Get Started - Free
           </Link>
-          <Link 
-            href="https://buy.stripe.com/test_4gMdRbgtV8yWaVG8mu43S00" 
+          <button 
+            onClick={handleStripeCheckout}
             className="inline-block bg-green-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-green-700 transition-colors shadow-lg"
           >
             Get Founding Member Access - $29
-          </Link>
+          </button>
         </div>
         {/* Trust indicator and login banner */}
         <p className="mt-4 text-sm text-gray-500 mb-4">
@@ -321,6 +366,49 @@ function HowItWorksSection() {
  * Pricing Section - Founding Member special
  */
 function PricingSection() {
+  const router = useRouter();
+  const supabase = createClientComponentClient();
+
+  const handleStripeCheckout = async () => {
+    try {
+      // Get current user
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (error || !user) {
+        // No user, redirect to signup
+        router.push("/signup");
+        return;
+      }
+      
+      // User exists, create checkout session
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user.email,
+          uid: user.id,
+          name: user.user_metadata.full_name || "N/A"
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+      
+      const { url } = await response.json();
+      
+      // Redirect to Stripe checkout
+      window.location.href = url;
+      
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      // Fallback to signup if there's an error
+      router.push("/signup");
+    }
+  };
+
   return (
     <section id="pricing" className="px-4 py-16 bg-gradient-to-b from-white to-slate-50 scroll-mt-28">
       <div className="container mx-auto max-w-4xl">
@@ -368,12 +456,12 @@ function PricingSection() {
           </ul>
           
           {/* CTA button */}
-          <Link 
-            href="https://buy.stripe.com/test_4gMdRbgtV8yWaVG8mu43S00" 
+          <button 
+            onClick={handleStripeCheckout}
             className="block w-full bg-blue-600 text-white py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
           >
             Claim Your Founding Member Spot
-          </Link>
+          </button>
           
           <p className="mt-4 text-sm text-gray-600">
             One-time payment • Instant access • 30-day guarantee
@@ -501,6 +589,49 @@ function FAQSection() {
  * Footer Section - Final CTA and contact info
  */
 function FooterSection() {
+  const router = useRouter();
+  const supabase = createClientComponentClient();
+
+  const handleStripeCheckout = async () => {
+    try {
+      // Get current user
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (error || !user) {
+        // No user, redirect to signup
+        router.push("/signup");
+        return;
+      }
+      
+      // User exists, create checkout session
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user.email,
+          uid: user.id,
+          name: user.user_metadata.full_name || "N/A"
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+      
+      const { url } = await response.json();
+      
+      // Redirect to Stripe checkout
+      window.location.href = url;
+      
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      // Fallback to signup if there's an error
+      router.push("/signup");
+    }
+  };
+
   return (
     <footer className="px-4 py-16 bg-gray-900 text-white">
       <div className="container mx-auto max-w-4xl text-center">
@@ -521,12 +652,12 @@ function FooterSection() {
         </p>
         
         {/* Final CTA */}
-        <Link 
-          href="https://buy.stripe.com/test_4gMdRbgtV8yWaVG8mu43S00" 
+        <button 
+          onClick={handleStripeCheckout}
           className="inline-block bg-white text-gray-900 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg mb-8"
         >
           Get Started for $29
-        </Link>
+        </button>
         
         {/* Contact info */}
         <div className="text-sm text-gray-400">

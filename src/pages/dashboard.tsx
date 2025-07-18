@@ -94,13 +94,25 @@ export default function DashboardPage() {
                   Welcome, {userProfile?.first_name || user?.email}
                 </span>
               </div>
-              <button
-                onClick={handleSignOut}
-                disabled={signingOut}
-                className="btn-accent px-4 py-2 text-sm disabled:opacity-60"
-              >
-                {signingOut ? 'Signing out...' : 'Sign Out'}
-              </button>
+              <div className="flex items-center space-x-3">
+                {userPlan?.plan === 'free' && (
+                  <a
+                    href="https://buy.stripe.com/test_4gMdRbgtV8yWaVG8mu43S00"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary px-4 py-2 text-sm font-medium"
+                  >
+                    Upgrade to Premium
+                  </a>
+                )}
+                <button
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="btn-accent px-4 py-2 text-sm disabled:opacity-60"
+                >
+                  {signingOut ? 'Signing out...' : 'Sign Out'}
+                </button>
+              </div>
             </div>
           </div>
         </header>
@@ -238,7 +250,14 @@ export default function DashboardPage() {
                       {userPlan?.plan ? userPlan.plan.charAt(0).toUpperCase() + userPlan.plan.slice(1) : 'Free'}
                     </div>
                   </div>
-                  <button className="text-accent hover:underline text-sm">Upgrade</button>
+                  <a
+                    href="https://buy.stripe.com/test_4gMdRbgtV8yWaVG8mu43S00"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent hover:underline text-sm"
+                  >
+                    Upgrade
+                  </a>
                 </div>
                 <div className="flex items-center justify-between py-3">
                   <div>

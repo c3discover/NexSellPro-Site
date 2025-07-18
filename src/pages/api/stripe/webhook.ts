@@ -103,116 +103,134 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     try {
       // ============================================
-      // STEP 6: Check if user already exists
+      // STEP 6: Check if user already exists in auth.users
       // ============================================
-      console.log('🔍 Checking if user exists...');
+      console.log('🔍 Checking if user exists in auth.users...');
       
-      console.log('🔍 About to query user_plan table...');
-      let existingUsers = null;
-      let fetchError = null;
+      let existingAuthUser = null;
+      let listError = null;
 
       try {
-        const response = await supabaseAdmin
-          .from('user_plan')
-          .select('user_id, email, plan, first_name, last_name')
-          .eq('email', email);
+        // Get all users and find by email
+        const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({
+          page: 1,
+          perPage: 1000
+        });
         
-        existingUsers = response.data;
-        fetchError = response.error;
+        listError = error;
         
-        console.log('📊 Query response:', {
-          hasData: !!existingUsers,
-          dataLength: existingUsers?.length || 0,
-          error: fetchError?.message || 'none'
+        if (!error && users) {
+          existingAuthUser = users.find((user: any) => user.email === email);
+        }
+        
+        console.log('📊 Auth users query response:', {
+          totalUsers: users?.length || 0,
+          foundUser: !!existingAuthUser,
+          error: listError?.message || 'none'
         });
       } catch (queryError) {
-        console.error('💥 Query threw exception:', queryError);
-        fetchError = queryError;
+        console.error('💥 Auth users query threw exception:', queryError);
+        listError = queryError;
       }
 
-      if (fetchError) {
-        console.error('❌ Error checking existing user:', {
-          message: (fetchError as any).message,
-          details: (fetchError as any).details,
-          hint: (fetchError as any).hint,
-          code: (fetchError as any).code
+      if (listError) {
+        console.error('❌ Error checking auth users:', {
+          message: (listError as any).message,
+          details: (listError as any).details,
+          hint: (listError as any).hint,
+          code: (listError as any).code
         });
       }
 
-      const existingUser = existingUsers?.[0];
-      
-      if (existingUser) {
+      if (existingAuthUser) {
         // ============================================
-        // CASE 1: User already exists - just update plan
+        // CASE 1: User exists in auth - check/update user_plan
         // ============================================
-        console.log('👤 User exists, updating plan...');
+        console.log('👤 User exists in auth, checking user_plan...', {
+          userId: existingAuthUser.id,
+          email: existingAuthUser.email
+        });
         
-        const { error: updateError } = await supabaseAdmin
+        // Check if user has a plan record
+        const { data: existingPlan, error: planError } = await supabaseAdmin
           .from('user_plan')
-          .update({ 
-            plan: 'premium',
-            first_name: firstName || existingUser.first_name,
-            last_name: lastName || existingUser.last_name,
-            updated_at: new Date().toISOString()
-          })
-          .eq('email', email);
+          .select('user_id, plan')
+          .eq('user_id', existingAuthUser.id)
+          .single();
 
-        if (updateError) {
-          console.error('❌ Error updating user plan:', updateError);
-          throw updateError;
+        if (planError && planError.code !== 'PGRST116') { // PGRST116 = no rows returned
+          console.error('❌ Error checking user plan:', planError);
+          throw planError;
         }
 
-        console.log('✅ Existing user plan updated to premium');
-        
-      } else {
-        // ============================================
-        // CASE 2: New user - create auth user first
-        // ============================================
-        console.log('🆕 Creating new user...');
-        
-        // Generate a secure temporary password
-        const tempPassword = generateSecurePassword();
-        
-        // Create auth user
-        const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
-          email: email,
-          password: tempPassword,
-          email_confirm: true, // Auto-confirm email
-          user_metadata: {
-            first_name: firstName,
-            last_name: lastName,
-            source: 'stripe_payment'
-          }
-        });
+        if (existingPlan) {
+          // Update existing plan
+          const { error: updateError } = await supabaseAdmin
+            .from('user_plan')
+            .update({ 
+              plan: 'premium',
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', existingAuthUser.id);
 
-        if (createError) {
-          // Check if user already exists in auth but not in user_plan
-          if (createError.message.includes('already registered')) {
-            console.log('⚠️ User exists in auth but not in user_plan, getting user ID...');
-            
-            // Get the existing user's ID
-            const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers({
-              page: 1,
-              perPage: 1000
+          if (updateError) {
+            console.error('❌ Error updating user plan:', updateError);
+            throw updateError;
+          }
+
+          console.log('✅ Existing user plan updated to premium');
+        } else {
+          // Insert new plan record
+          const { error: insertError } = await supabaseAdmin
+            .from('user_plan')
+            .insert({
+              user_id: existingAuthUser.id,
+              plan: 'premium'
             });
 
-            // Find user by email
-            const existingUser = users?.find((user: any) => user.email === email);
+          if (insertError) {
+            console.error('❌ Error inserting user plan:', insertError);
+            throw insertError;
+          }
 
-            if (listError || !existingUser) {
-              throw new Error('Could not find existing user');
+          console.log('✅ Added user plan record for existing auth user');
+        }
+        
+              } else {
+          // ============================================
+          // CASE 2: New user - create auth user first
+          // ============================================
+          console.log('🆕 Creating new user...');
+          
+          // Generate a secure temporary password
+          const tempPassword = generateSecurePassword();
+          
+          // Create auth user
+          const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+            email: email,
+            password: tempPassword,
+            email_confirm: true, // Auto-confirm email
+            user_metadata: {
+              first_name: firstName,
+              last_name: lastName,
+              source: 'stripe_payment'
             }
+          });
 
-            const userId = existingUser.id;
+          if (createError) {
+            console.error('❌ Error creating auth user:', createError);
+            throw createError;
+          }
+
+          if (authData?.user) {
+            // New user created successfully
+            console.log('✅ Auth user created:', authData.user.id);
             
-            // Insert into user_plan
+            // Insert into user_plan table
             const { error: insertError } = await supabaseAdmin
               .from('user_plan')
               .insert({
-                user_id: userId,
-                email: email,
-                first_name: firstName,
-                last_name: lastName,
+                user_id: authData.user.id,
                 plan: 'premium'
               });
 
@@ -221,40 +239,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               throw insertError;
             }
 
-            console.log('✅ Added existing auth user to user_plan');
+            console.log('✅ User added to user_plan table');
             
-            // Send password reset email
+            // Send password reset email for new users
             await sendPasswordResetEmail(supabaseAdmin, email);
-            
-          } else {
-            throw createError;
           }
-        } else if (authData?.user) {
-          // New user created successfully
-          console.log('✅ Auth user created:', authData.user.id);
-          
-          // Insert into user_plan table
-          const { error: insertError } = await supabaseAdmin
-            .from('user_plan')
-            .insert({
-              user_id: authData.user.id,
-              email: email,
-              first_name: firstName,
-              last_name: lastName,
-              plan: 'premium'
-            });
-
-          if (insertError) {
-            console.error('❌ Error inserting user_plan:', insertError);
-            throw insertError;
-          }
-
-          console.log('✅ User added to user_plan table');
-          
-          // Send password reset email for new users
-          await sendPasswordResetEmail(supabaseAdmin, email);
         }
-      }
 
       console.log('🎉 Webhook processing completed successfully');
       

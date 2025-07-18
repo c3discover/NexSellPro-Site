@@ -218,6 +218,7 @@ export default function SignupPage() {
           
           while (!profileSaved && retryCount < maxRetries) {
             try {
+              console.log(`Attempting to save user profile (attempt ${retryCount + 1}/${maxRetries})`);
               await upsertUserProfile({
                 user_id: data.user.id,
                 first_name: form.firstName,
@@ -226,12 +227,27 @@ export default function SignupPage() {
                 how_did_you_hear: form.howDidYouHear || undefined,
               });
               profileSaved = true;
+              console.log('✅ User profile saved successfully');
             } catch (profileError) {
               retryCount++;
+              console.error(`❌ Profile save attempt ${retryCount} failed:`, {
+                error: profileError,
+                userId: data.user.id,
+                firstName: form.firstName,
+                lastName: form.lastName,
+                businessName: form.businessName,
+                howDidYouHear: form.howDidYouHear
+              });
+              
               if (retryCount >= maxRetries) {
-                console.error('Failed to save user profile after retries:', profileError);
+                console.error('❌ Failed to save user profile after all retries:', {
+                  totalAttempts: retryCount,
+                  finalError: profileError,
+                  userId: data.user.id
+                });
                 // Don't fail the signup if profile save fails - user can update later
               } else {
+                console.log(`⏳ Waiting ${1000 * retryCount}ms before retry...`);
                 // Wait before retrying
                 await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
               }

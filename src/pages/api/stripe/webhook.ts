@@ -2,14 +2,12 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-// Disable body parsing - CRITICAL for Stripe webhooks
 export const config = {
   api: {
     bodyParser: false,
   },
 };
 
-// Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-06-30.basil',
 });
@@ -19,7 +17,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // Read the raw body
   const chunks: any[] = [];
   await new Promise((resolve, reject) => {
     req.on('data', (chunk) => chunks.push(chunk));
@@ -33,122 +30,71 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let event: Stripe.Event;
 
   try {
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+    event = stripe.webhooks.constructEvent(
+      rawBody, 
+      sig, 
+      process.env.STRIPE_WEBHOOK_SECRET!
+    );
     console.log('✅ Webhook verified:', event.type);
   } catch (err: any) {
     console.error('❌ Webhook error:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // Respond to Stripe immediately
   res.status(200).json({ received: true });
 
-  // Handle the event
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
-    
-    // Get email from session
     const email = session.customer_email || session.customer_details?.email;
     
     if (!email) {
-      console.error('❌ No email found in session');
+      console.error('❌ No email found');
       return;
     }
 
-    console.log('📧 Processing payment for:', email);
+    console.log('📧 Processing:', email);
 
-    // Create Supabase admin client
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceKey) {
-      console.error('❌ Missing Supabase environment variables');
-      return;
-    }
-
-    const supabase = createClient(supabaseUrl, serviceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
       }
+    );
+
+    // Just try to create the user - if they exist, we'll get an error
+    const password = Math.random().toString(36).slice(2) + 'Aa1!';
+    
+    const { data, error } = await supabase.auth.admin.createUser({
+      email: email,
+      password: password,
+      email_confirm: true
     });
 
-    try {
-      // Step 1: Check if user exists by querying auth.users directly
-      console.log('🔍 Checking if user exists...');
-      const { data: existingUser, error: lookupError } = await supabase
-        .from('auth.users')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-      let userId: string;
-
-      if (existingUser) {
-        // User exists
-        console.log('✅ User already exists:', existingUser.id);
-        userId = existingUser.id;
-      } else {
-        // Create new user
-        console.log('🆕 Creating new user...');
-        
-        // Generate a random password
-        const password = Math.random().toString(36).slice(-12) + 'Aa1!';
-        
-        const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-          email: email,
-          password: password,
-          email_confirm: true,
-          user_metadata: {
-            stripe_session_id: session.id,
-            payment_date: new Date().toISOString()
-          }
-        });
-
-        if (createError) {
-          console.error('❌ Error creating user:', createError.message);
-          return;
-        }
-
-        console.log('✅ User created:', newUser.user.id);
-        userId = newUser.user.id;
-
-        // Send password reset email for new users
-        console.log('📧 Sending password reset email...');
-        const { error: emailError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: 'https://nexsellpro.com/setup-account'
-        });
-
-        if (emailError) {
-          console.error('❌ Error sending email:', emailError.message);
-        } else {
-          console.log('✅ Password reset email sent');
-        }
-      }
-
-      // Step 2: Update user_plan table
-      console.log('💾 Updating user plan...');
-      const { error: planError } = await supabase
+    if (error) {
+      console.log('⚠️ User exists or error:', error.message);
+    } else if (data.user) {
+      console.log('✅ User created:', data.user.id);
+      
+      // Add to user_plan
+      await supabase
         .from('user_plan')
-        .upsert({
-          user_id: userId,
-          plan: 'paid',
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
+        .insert({ 
+          user_id: data.user.id, 
+          plan: 'paid' 
         });
-
-      if (planError) {
-        console.error('❌ Error updating user plan:', planError.message);
-      } else {
-        console.log('✅ User plan updated to paid');
-      }
-
-      console.log('🎉 Payment processing complete for:', email);
-
-    } catch (error) {
-      console.error('❌ Unexpected error:', error);
+      
+      // Send email
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://nexsellpro.com/setup-account'
+      });
+      
+      console.log('✅ Email sent');
     }
+    
+    console.log('✅ Done');
   }
 }

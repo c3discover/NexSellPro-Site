@@ -138,7 +138,7 @@ export default function AuthCallback() {
           const { error: insertError } = await supabase.from("user_plan").insert([
             {
               user_id: userId,
-              plan: "beta",
+              plan: "free",
             },
           ]);
 

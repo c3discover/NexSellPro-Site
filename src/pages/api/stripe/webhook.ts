@@ -150,7 +150,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { error: updateError } = await supabaseAdmin
           .from('user_plan')
           .update({ 
-            plan: 'paid',
+            plan: 'premium',
             first_name: firstName || existingUser.first_name,
             last_name: lastName || existingUser.last_name,
             updated_at: new Date().toISOString()
@@ -162,7 +162,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           throw updateError;
         }
 
-        console.log('✅ Existing user plan updated to paid');
+        console.log('✅ Existing user plan updated to premium');
         
       } else {
         // ============================================
@@ -213,7 +213,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 email: email,
                 first_name: firstName,
                 last_name: lastName,
-                plan: 'paid'
+                plan: 'premium'
               });
 
             if (insertError) {
@@ -241,7 +241,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               email: email,
               first_name: firstName,
               last_name: lastName,
-              plan: 'paid'
+              plan: 'premium'
             });
 
           if (insertError) {

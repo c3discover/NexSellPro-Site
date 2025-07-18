@@ -97,7 +97,7 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-3">
                 {userPlan?.plan === 'free' && (
                   <a
-                    href="https://buy.stripe.com/test_4gMdRbgtV8yWaVG8mu43S00"
+                    href="https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-primary px-4 py-2 text-sm font-medium"
@@ -251,7 +251,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <a
-                    href="https://buy.stripe.com/test_4gMdRbgtV8yWaVG8mu43S00"
+                    href="https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-accent hover:underline text-sm"

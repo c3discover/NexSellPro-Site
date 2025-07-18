@@ -1,314 +1,75 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
-
-// ============================================
-// CONFIGURATION
-// ============================================
+import { buffer } from 'micro'
+import Stripe from 'stripe'
+import { createClient } from '@supabase/supabase-js'
 
 export const config = {
   api: {
-    bodyParser: false, // CRITICAL: Stripe needs raw body
+    bodyParser: false,
   },
-};
+}
 
-// Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-06-30.basil',
-});
+  apiVersion: '2025-06-30.basil', // Match the webhook API version
+})
 
-// ============================================
-// MAIN WEBHOOK HANDLER
-// ============================================
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-
-
-  // Only accept POST requests
+const webhookHandler = async (req: any, res: any) => {
   if (req.method !== 'POST') {
-
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    return res.status(405).end('Method not allowed')
   }
 
+  const sig = req.headers['stripe-signature']
+  const buf = await buffer(req)
 
-
-  // ============================================
-  // STEP 1: Read the raw body (required by Stripe)
-  // ============================================
-  const chunks: any[] = [];
-  const rawBody = await new Promise<Buffer>((resolve, reject) => {
-    req.on('data', (chunk) => chunks.push(chunk));
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', reject);
-  });
-
-  // ============================================
-  // STEP 2: Verify the webhook signature
-  // ============================================
-  const sig = req.headers['stripe-signature'] as string;
-  let event: Stripe.Event;
+  let event: Stripe.Event
 
   try {
     event = stripe.webhooks.constructEvent(
-      rawBody, 
-      sig, 
+      buf,
+      sig!,
       process.env.STRIPE_WEBHOOK_SECRET!
-    );
-
+    )
   } catch (err: any) {
-    console.error('❌ Webhook verification failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    console.error('Webhook signature verification failed:', err.message)
+    return res.status(400).send(`Webhook Error: ${err.message}`)
   }
 
-  // ============================================
-  // STEP 3: Respond to Stripe immediately
-  // This prevents timeouts
-  // ============================================
-  res.status(200).json({ received: true });
-
-  // ============================================
-  // STEP 4: Process the payment asynchronously
-  // ============================================
   if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session;
-    
-    // Extract email from session
-    const email = session.customer_email || session.customer_details?.email;
-    const customerName = session.customer_details?.name || '';
-    
-    // Split name into first and last
-    const nameParts = customerName.split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
-    
-    if (!email) {
-      console.error('❌ No email found in payment session');
-      return;
+    const session = event.data.object as Stripe.Checkout.Session
+    const customerEmail = session.customer_email
+    const stripeCustomerId = session.customer as string
+
+    if (!customerEmail || !stripeCustomerId) {
+      console.warn('Missing email or customer ID from session')
+      return res.status(400).send('Invalid session payload')
     }
 
-
-
-    // ============================================
-    // STEP 5: Initialize Supabase Admin Client
-    // ============================================
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!, // Service role key bypasses RLS
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
-
-    try {
-      // ============================================
-      // STEP 6: Check if user already exists in auth.users
-      // ============================================
-  
-      
-      let existingAuthUser = null;
-      let listError = null;
-
-      try {
-        // Get all users and find by email
-        const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({
-          page: 1,
-          perPage: 1000
-        });
-        
-        listError = error;
-        
-        if (!error && users) {
-          existingAuthUser = users.find((user: any) => user.email === email);
-        }
-        
-
-      } catch (queryError) {
-        console.error('💥 Auth users query threw exception:', queryError);
-        listError = queryError;
-      }
-
-      if (listError) {
-        console.error('❌ Error checking auth users:', {
-          message: (listError as any).message,
-          details: (listError as any).details,
-          hint: (listError as any).hint,
-          code: (listError as any).code
-        });
-      }
-
-      if (existingAuthUser) {
-        // ============================================
-        // CASE 1: User exists in auth - check/update user_plan
-        // ============================================
-
-        
-        // Check if user has a plan record
-        const { data: existingPlan, error: planError } = await supabaseAdmin
-          .from('user_plan')
-          .select('user_id, plan')
-          .eq('user_id', existingAuthUser.id)
-          .single();
-
-        if (planError && planError.code !== 'PGRST116') { // PGRST116 = no rows returned
-          console.error('❌ Error checking user plan:', planError);
-          throw planError;
-        }
-
-        if (existingPlan) {
-          // Update existing plan
-          const { error: updateError } = await supabaseAdmin
-            .from('user_plan')
-            .update({ 
-              plan: 'premium',
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_id', existingAuthUser.id);
-
-          if (updateError) {
-            console.error('❌ Error updating user plan:', updateError);
-            throw updateError;
-          }
-
-
-        } else {
-          // Insert new plan record
-          const { error: insertError } = await supabaseAdmin
-            .from('user_plan')
-            .insert({
-              user_id: existingAuthUser.id,
-              plan: 'premium'
-            });
-
-          if (insertError) {
-            console.error('❌ Error inserting user plan:', insertError);
-            throw insertError;
-          }
-
-
-        }
-        
-              } else {
-          // ============================================
-          // CASE 2: New user - create auth user first
-          // ============================================
-
-          
-          // Generate a secure temporary password
-          const tempPassword = generateSecurePassword();
-          
-          // Create auth user
-          const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
-            email: email,
-            password: tempPassword,
-            email_confirm: true, // Auto-confirm email
-            user_metadata: {
-              first_name: firstName,
-              last_name: lastName,
-              source: 'stripe_payment'
-            }
-          });
-
-          if (createError) {
-            console.error('❌ Error creating auth user:', createError);
-            throw createError;
-          }
-
-          if (authData?.user) {
-            // New user created successfully
-
-            
-            // Insert into user_plan table
-            const { error: insertError } = await supabaseAdmin
-              .from('user_plan')
-              .insert({
-                user_id: authData.user.id,
-                plan: 'premium'
-              });
-
-            if (insertError) {
-              console.error('❌ Error inserting user_plan:', insertError);
-              throw insertError;
-            }
-
-
-            
-            // Send password reset email for new users
-            await sendPasswordResetEmail(supabaseAdmin, email);
-          }
-        }
-
-
-      
-    } catch (error) {
-      console.error('❌ Fatal error in webhook:', error);
-      // Don't throw - we already responded to Stripe
-      // Consider sending to error tracking service (Sentry, etc)
-    }
-  }
-}
-
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
-
-/**
- * Generate a secure temporary password
- */
-function generateSecurePassword(): string {
-  const length = 16;
-  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-  let password = '';
-  
-  // Ensure at least one of each required character type
-  password += 'A'; // Uppercase
-  password += 'a'; // Lowercase
-  password += '1'; // Number
-  password += '!'; // Special
-  
-  // Fill the rest randomly
-  for (let i = password.length; i < length; i++) {
-    password += charset.charAt(Math.floor(Math.random() * charset.length));
-  }
-  
-  // Shuffle the password
-  return password.split('').sort(() => Math.random() - 0.5).join('');
-}
-
-/**
- * Send password reset email with retry logic
- */
-async function sendPasswordResetEmail(supabaseAdmin: any, email: string): Promise<void> {
-
-  
-  try {
-    // Note: resetPasswordForEmail uses the PUBLIC client methods
-    // So we need to use the standard auth methods, not admin
-    const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://nexsellpro.com'}/reset-password`
-    });
+    // Create user_plan row if not exists
+    const { data, error } = await supabase
+      .from('user_plan')
+      .upsert(
+        {
+          id: stripeCustomerId, // TEMPORARY: replace with Supabase UID later if known
+          email: customerEmail,
+          plan: 'beta',
+          stripe_customer_id: stripeCustomerId,
+        },
+        { onConflict: 'email' }
+      )
 
     if (error) {
-      console.error('❌ Error sending reset email:', error);
-      
-      // Retry once after a delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const { error: retryError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://nexsellpro.com'}/reset-password`
-      });
-      
-      if (retryError) {
-        console.error('❌ Retry failed:', retryError);
-        throw retryError;
-      }
+      console.error('Supabase upsert error:', error)
+      return res.status(500).send('Database error')
     }
 
-
-  } catch (error) {
-    console.error('❌ Failed to send password reset email:', error);
-    // Don't throw - payment was successful, this is a secondary action
+    console.log('✅ user_plan row updated:', data)
   }
+
+  res.status(200).json({ received: true })
 }
+
+export default webhookHandler

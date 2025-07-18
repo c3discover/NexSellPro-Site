@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import ReCAPTCHA from 'react-google-recaptcha';
-import { supabase, upsertUserProfile } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 // TypeScript types for form data and errors
 interface SignupForm {
@@ -184,7 +184,7 @@ export default function SignupPage() {
         email: form.email,
         password: form.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`,
+          emailRedirectTo: `${window.location.origin}/post-signup-to-stripe`,
           data: {
             first_name: form.firstName,
             last_name: form.lastName,
@@ -211,75 +211,43 @@ export default function SignupPage() {
       // Step 2: Store user profile data if signup was successful
       if (data.user) {
         try {
-          // Use a retry mechanism to ensure profile data is saved
-          let profileSaved = false;
-          let retryCount = 0;
-          const maxRetries = 3;
-          
-          while (!profileSaved && retryCount < maxRetries) {
-            try {
-              console.log(`Attempting to save user profile (attempt ${retryCount + 1}/${maxRetries})`);
-              await upsertUserProfile({
-                user_id: data.user.id,
-                first_name: form.firstName,
-                last_name: form.lastName,
-                business_name: form.businessName || undefined,
-                how_did_you_hear: form.howDidYouHear || undefined,
-              });
-              profileSaved = true;
-              console.log('✅ User profile saved successfully');
-            } catch (profileError) {
-              retryCount++;
-              console.error(`❌ Profile save attempt ${retryCount} failed:`, {
-                error: profileError,
-                userId: data.user.id,
-                firstName: form.firstName,
-                lastName: form.lastName,
-                businessName: form.businessName,
-                howDidYouHear: form.howDidYouHear
-              });
-              
-              if (retryCount >= maxRetries) {
-                console.error('❌ Failed to save user profile after all retries:', {
-                  totalAttempts: retryCount,
-                  finalError: profileError,
-                  userId: data.user.id
-                });
-                // Don't fail the signup if profile save fails - user can update later
-              } else {
-                console.log(`⏳ Waiting ${1000 * retryCount}ms before retry...`);
-                // Wait before retrying
-                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-              }
-            }
+          // Insert user profile into user_profiles table
+          const profileData = {
+            user_id: data.user.id,
+            first_name: form.firstName,
+            last_name: form.lastName,
+            ...(form.businessName && { business_name: form.businessName }),
+            ...(form.howDidYouHear && { how_did_you_hear: form.howDidYouHear })
+          };
+
+          const { error: profileError } = await supabase
+            .from("user_profiles")
+            .upsert(profileData);
+
+          if (profileError) {
+            console.error('Error inserting user profile:', profileError);
+            // Don't fail the signup if profile save fails - user can update later
+          } else {
+            console.log('✅ User profile saved successfully');
           }
 
-          // Step 3: Set user plan to "free" after successful profile creation
-          if (profileSaved) {
-            try {
-              const planResponse = await fetch('/api/set-user-plan', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  userId: data.user.id,
-                  plan: 'free'
-                })
-              });
+          // Insert user into user_plan table
+          const { error: planError } = await supabase
+            .from("user_plan")
+            .upsert({
+              user_id: data.user.id,
+              plan: "free"
+            });
 
-              if (!planResponse.ok) {
-                console.warn('Failed to set user plan, but signup continues:', await planResponse.text());
-                // Don't fail the signup if plan assignment fails - user can be updated later
-              } else {
-                console.log('Successfully set user plan to free');
-              }
-            } catch (planError) {
-              console.error('Error setting user plan:', planError);
-              // Don't fail the signup if plan assignment fails - user can be updated later
-            }
+          if (planError) {
+            console.error('Error inserting user plan:', planError);
+            // Don't fail the signup if plan assignment fails - user can be updated later
+          } else {
+            console.log('✅ User plan set to free successfully');
           }
-        } catch (profileError) {
-          console.error('Error saving user profile:', profileError);
-          // Don't fail the signup if profile save fails - user can update later
+        } catch (error) {
+          console.error('Error saving user data:', error);
+          // Don't fail the signup if data save fails - user can update later
         }
       }
 
@@ -309,7 +277,7 @@ export default function SignupPage() {
         email: form.email,
         password: form.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`,
+          emailRedirectTo: `${window.location.origin}/post-signup-to-stripe`,
           data: {
             first_name: form.firstName,
             last_name: form.lastName,

@@ -155,7 +155,7 @@ export default function AuthCallback() {
     const redirectPath = (() => {
       switch (type) {
         case 'signup':
-          return '/dashboard';
+          return '/post-signup-to-stripe';
         case 'recovery':
           return '/reset-password';
         case 'magic_link':
@@ -330,7 +330,10 @@ export default function AuthCallback() {
             <>
               <div className="text-4xl mb-4">✅</div>
               <h1 className="text-2xl font-bold mb-2 text-green-400">Success!</h1>
-              <p className="text-gray-400">Redirecting you to your dashboard...</p>
+              <p className="text-gray-400">
+                {authType === 'signup' && 'Redirecting you to complete your setup...'}
+                {authType !== 'signup' && 'Redirecting you to your dashboard...'}
+              </p>
             </>
           )}
           

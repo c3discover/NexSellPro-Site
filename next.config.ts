@@ -2,13 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   srcDir: "src", // 👈 add this 
-  output: "export", // 👈 add this 
-  images: {
-    unoptimized: true, // 👈 add this 
-  },
-  trailingSlash: true, // 👈 add this 
-  swcMinify: true, // 👈 add this   
-
   // Enable React Strict Mode for better development experience and catching potential issues
   reactStrictMode: true,
 

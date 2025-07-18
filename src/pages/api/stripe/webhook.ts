@@ -1,52 +1,61 @@
-import { NextRequest } from "next/server";
-import Stripe from "stripe";
-import { headers } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
+import { NextApiRequest, NextApiResponse } from 'next';
+import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-06-30.basil",
+  apiVersion: '2025-06-30.basil',
 });
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // You need Service Role key to write to DB
-);
+// This is the key change - use default export with NextApiRequest/NextApiResponse
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  // Only allow POST requests
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).end('Method Not Allowed');
+  }
 
-export async function POST(req: NextRequest) {
-  const body = await req.text();
-  const headersList = await headers();
-  const sig = headersList.get("stripe-signature")!;
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+  const sig = req.headers['stripe-signature'];
+
+  if (!sig) {
+    return res.status(400).json({ error: 'Missing stripe-signature header' });
+  }
 
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+    // Important: Use req.body as a string/buffer for Stripe verification
+    const body = JSON.stringify(req.body);
+    event = stripe.webhooks.constructEvent(
+      body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET!
+    );
   } catch (err: any) {
-    console.error("Webhook Error:", err.message);
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+    console.error(`Webhook Error: ${err.message}`);
+    return res.status(400).json({ error: `Webhook Error: ${err.message}` });
   }
 
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.Checkout.Session;
-    const email = session.customer_details?.email;
-
-    if (email) {
-      const { error } = await supabase.from("user_plan").insert([
-        {
-          user_id: session.client_reference_id || crypto.randomUUID(),
-          plan: "founding_member",
-        },
-      ]);
-
-      if (error) {
-        console.error("Supabase insert error:", error.message);
-        return new Response("Error saving user to Supabase", { status: 500 });
-      }
-    }
+  // Handle the event
+  switch (event.type) {
+    case 'checkout.session.completed':
+      const session = event.data.object as Stripe.Checkout.Session;
+      // TODO: Fulfill the purchase, update database, etc.
+      console.log('Checkout session completed:', session.id);
+      break;
+    
+    default:
+      console.log(`Unhandled event type ${event.type}`);
   }
 
-  return new Response("Webhook received", { status: 200 });
+  // Return a 200 response to acknowledge receipt of the event
+  res.status(200).json({ received: true });
 }
 
-
+// CRITICAL: Disable body parsing for webhooks
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};

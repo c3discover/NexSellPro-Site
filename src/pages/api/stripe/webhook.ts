@@ -47,8 +47,8 @@ function generateSecurePassword(): string {
 }
 
 /**
- * Handles paid user creation with simplified approach
- * Attempts to create user directly - if they exist, Supabase will return an error
+ * Handles paid user creation with complete email and user management
+ * Creates new users or upgrades existing users to paid plan
  * @param email - User's email address
  * @param sessionId - Stripe session ID for tracking
  */
@@ -58,7 +58,7 @@ async function handlePaidUser(email: string, sessionId: string): Promise<void> {
   const adminClient = createSupabaseAdmin();
   
   try {
-    // Just try to create the user - simpler approach
+    // First, try to create the user
     const password = generateSecurePassword();
     
     const { data: newUser, error: createError } = await adminClient
@@ -74,31 +74,86 @@ async function handlePaidUser(email: string, sessionId: string): Promise<void> {
         }
       });
     
-    if (createError) {
-      console.error('❌ Could not create user:', createError.message);
-      // User might already exist - that's OK for now
+    if (createError && createError.message.includes('already been registered')) {
+      // User already exists - just update their plan
+      console.log('📊 User already exists, updating plan...');
+      
+      // Get the existing user's ID
+      const { data: { users }, error: searchError } = await adminClient
+        .auth
+        .admin
+        .listUsers();
+      
+      if (!searchError && users && users.length > 0) {
+        const existingUser = users.find(user => user.email === email);
+        
+        if (!existingUser) {
+          console.error('❌ User not found in list despite registration error');
+          return;
+        }
+        
+        // Update or insert user_plan
+        const { error: planError } = await adminClient
+          .from('user_plan')
+          .upsert({
+            user_id: existingUser.id,
+            plan: 'paid',
+            updated_at: new Date().toISOString()
+          });
+        
+        if (planError) {
+          console.error('❌ Error updating user plan:', planError.message);
+        } else {
+          console.log('✅ Existing user upgraded to paid plan');
+          
+          // Send a "payment successful" email (optional)
+          // You could send a custom email here confirming their purchase
+        }
+      }
+      return;
+    } else if (createError) {
+      // Some other error
+      console.error('❌ Error creating user:', createError.message);
       return;
     }
     
-    console.log('✅ User created:', newUser.user?.id);
+    // New user created successfully
+    console.log('✅ New user created:', newUser.user?.id);
     
     // Add to user_plan table
     if (newUser.user?.id) {
-      await adminClient
+      const { error: planError } = await adminClient
         .from('user_plan')
-        .insert({ user_id: newUser.user.id, plan: 'paid' });
+        .insert({ 
+          user_id: newUser.user.id, 
+          plan: 'paid' 
+        });
       
-      // Send password reset
-      await adminClient.auth.admin.generateLink({
-        type: 'recovery',
-        email: email
-      });
+      if (planError) {
+        console.error('❌ Error setting user plan:', planError);
+      } else {
+        console.log('✅ User plan set to paid');
+      }
       
-      console.log('✅ Password reset email sent');
+      // Send welcome email with password reset
+      console.log('📧 Sending welcome email...');
+      
+      // This actually sends the email
+      const { error: emailError } = await adminClient
+        .auth
+        .resetPasswordForEmail(email, {
+          redirectTo: 'https://nexsellpro.com/setup-account'
+        });
+      
+      if (emailError) {
+        console.error('❌ Error sending welcome email:', emailError.message);
+      } else {
+        console.log('✅ Welcome email sent with password setup link');
+      }
     }
     
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌ Unexpected error:', error);
   }
 }
 

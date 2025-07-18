@@ -1,120 +1,56 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import Stripe from 'stripe';
-import { Readable } from 'stream';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-06-30.basil', // Use the version your Stripe package requires
-});
-
-// CRITICAL: Disable body parsing
+// Disable body parsing - CRITICAL for Stripe webhooks
 export const config = {
   api: {
     bodyParser: false,
   },
 };
 
-// Helper function to get raw body
-async function getRawBody(req: NextApiRequest): Promise<string> {
-  const chunks: Uint8Array[] = [];
-  const readable = req as unknown as Readable;
-  
-  for await (const chunk of readable) {
-    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-  }
-  
-  return Buffer.concat(chunks).toString('utf8');
-}
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Debug endpoint (remove in production)
+  // Simple GET test
   if (req.method === 'GET') {
     return res.status(200).json({ 
-      status: 'Webhook endpoint active',
-      hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
-      hasWebhookSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
+      message: 'Webhook is active',
       timestamp: new Date().toISOString()
     });
   }
 
   // Only allow POST
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).end('Method Not Allowed');
+    return res.status(405).json({ error: 'Method not allowed' });
   }
-
-  const sig = req.headers['stripe-signature'];
-  
-  // Handle case where header might be an array
-  const signature = Array.isArray(sig) ? sig[0] : sig;
-
-  if (!signature) {
-    console.error('Missing stripe-signature header');
-    return res.status(400).json({ error: 'Missing stripe-signature header' });
-  }
-
-  let event: Stripe.Event;
-  let rawBody: string;
 
   try {
-    // Get raw body without using micro
-    rawBody = await getRawBody(req);
-    
-    console.log('Webhook received:', {
-      bodyLength: rawBody.length,
-      signature: signature.substring(0, 20) + '...',
-      secretPreview: process.env.STRIPE_WEBHOOK_SECRET?.substring(0, 10) + '...'
+    // Get the raw body
+    const chunks: any[] = [];
+    await new Promise((resolve, reject) => {
+      req.on('data', (chunk) => chunks.push(chunk));
+      req.on('end', () => resolve(true));
+      req.on('error', reject);
     });
-    
-    // Verify webhook
-    event = stripe.webhooks.constructEvent(
-      rawBody,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
-    
-    console.log('✅ Webhook verified! Event type:', event.type);
-  } catch (err: any) {
-    console.error('❌ Webhook error:', err.message);
-    return res.status(400).json({ error: `Webhook Error: ${err.message}` });
-  }
+    const rawBody = Buffer.concat(chunks).toString('utf8');
 
-  // Handle events
-  try {
-    switch (event.type) {
-      case 'checkout.session.completed':
-        const session = event.data.object as Stripe.Checkout.Session;
-        console.log('💰 Payment completed!', {
-          sessionId: session.id,
-          customerEmail: session.customer_email,
-          amountTotal: session.amount_total
-        });
-        
-        // TODO: Add your business logic here
-        // - Save to database
-        // - Send welcome email
-        // - Grant access
-        
-        break;
-
-      case 'payment_intent.succeeded':
-        console.log('💳 Payment succeeded');
-        break;
-
-      case 'payment_intent.payment_failed':
-        console.log('❌ Payment failed');
-        break;
-
-      default:
-        console.log('Unhandled event type:', event.type);
+    // Get Stripe signature
+    const sig = req.headers['stripe-signature'];
+    if (!sig) {
+      return res.status(400).json({ error: 'No signature' });
     }
-  } catch (error) {
-    console.error('Error processing webhook:', error);
-  }
 
-  // Always return 200
-  res.status(200).json({ received: true });
+    // For now, just log and return success
+    // We'll add Stripe verification once this basic version works
+    console.log('Webhook received!');
+    console.log('Body length:', rawBody.length);
+    console.log('Has signature:', !!sig);
+
+    // Return success
+    return res.status(200).json({ received: true });
+
+  } catch (error: any) {
+    console.error('Webhook error:', error);
+    return res.status(500).json({ error: error.message });
+  }
 }

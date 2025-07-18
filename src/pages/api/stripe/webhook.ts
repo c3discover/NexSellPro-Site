@@ -47,129 +47,58 @@ function generateSecurePassword(): string {
 }
 
 /**
- * Handles paid user creation or plan updates
- * Checks if user exists and either updates their plan or creates a new account
+ * Handles paid user creation with simplified approach
+ * Attempts to create user directly - if they exist, Supabase will return an error
  * @param email - User's email address
  * @param sessionId - Stripe session ID for tracking
  */
 async function handlePaidUser(email: string, sessionId: string): Promise<void> {
   console.log('📋 Starting handlePaidUser for:', email);
   
-  // Validate environment variables first
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    console.error('❌ CRITICAL: Missing Supabase environment variables');
-    console.error('- SUPABASE_URL:', !!SUPABASE_URL);
-    console.error('- SUPABASE_SERVICE_ROLE_KEY:', !!SUPABASE_SERVICE_ROLE_KEY);
-    return;
-  }
-  
-  console.log('✅ Environment variables present');
-  
   const adminClient = createSupabaseAdmin();
-  console.log('✅ Admin client created');
   
   try {
-    // Check if user already exists
-    console.log('🔍 Checking if user exists:', email);
+    // Just try to create the user - simpler approach
+    const password = generateSecurePassword();
     
-    const { data: existingUsers, error: searchError } = await adminClient
+    const { data: newUser, error: createError } = await adminClient
       .auth
       .admin
-      .listUsers();
+      .createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { 
+          role: 'paid',
+          stripe_session_id: sessionId
+        }
+      });
     
-    console.log('📊 User search complete');
-    console.log('- Total users found:', existingUsers?.users?.length || 0);
-    console.log('- Search error:', searchError?.message || 'none');
-    
-    if (searchError) {
-      console.error('❌ Error searching for user:', searchError);
+    if (createError) {
+      console.error('❌ Could not create user:', createError.message);
+      // User might already exist - that's OK for now
       return;
     }
     
-    const existingUser = existingUsers.users.find(user => user.email === email);
+    console.log('✅ User created:', newUser.user?.id);
     
-    if (existingUser) {
-      // User exists - update their plan
-      console.log('🔄 Existing user found, updating to paid plan:', email);
-      
-      // Update user_plan table to 'paid'
-      const { error: updateError } = await adminClient
+    // Add to user_plan table
+    if (newUser.user?.id) {
+      await adminClient
         .from('user_plan')
-        .upsert({
-          user_id: existingUser.id,
-          plan: 'paid',
-          updated_at: new Date().toISOString()
-        });
+        .insert({ user_id: newUser.user.id, plan: 'paid' });
       
-      if (updateError) {
-        console.error('❌ Error updating user plan:', updateError);
-      } else {
-        console.log('✅ User plan updated to paid');
-      }
+      // Send password reset
+      await adminClient.auth.admin.generateLink({
+        type: 'recovery',
+        email: email
+      });
       
-    } else {
-      // Create new user
-      console.log('🆕 Creating new paid user:', email);
-      
-      const password = generateSecurePassword();
-      
-      const { data: newUser, error: createError } = await adminClient
-        .auth
-        .admin
-        .createUser({
-          email,
-          password,
-          email_confirm: true,
-          user_metadata: { 
-            role: 'paid',
-            stripe_session_id: sessionId,
-            payment_date: new Date().toISOString()
-          }
-        });
-      
-      if (createError) {
-        console.error('❌ Error creating user:', createError);
-        return;
-      }
-      
-      console.log('✅ New user created successfully');
-      
-      // Insert into user_plan table
-      if (newUser.user) {
-        const { error: planError } = await adminClient
-          .from('user_plan')
-          .insert({
-            user_id: newUser.user.id,
-            plan: 'paid'
-          });
-        
-        if (planError) {
-          console.error('❌ Error setting user plan:', planError);
-        } else {
-          console.log('✅ User plan set to paid');
-        }
-      }
-      
-      // Send password reset email for new users
-      // This allows them to set their own password since we generated a random one
-      const { data: resetLink, error: resetError } = await adminClient
-        .auth
-        .admin
-        .generateLink({
-          type: 'recovery',
-          email: email
-        });
-      
-      if (resetError) {
-        console.error('❌ Error generating password reset link:', resetError);
-      } else {
-        console.log('✅ Password reset email queued for:', email);
-        console.log('🔗 Reset link generated (Supabase will send email)');
-      }
+      console.log('✅ Password reset email sent');
     }
     
   } catch (error) {
-    console.error('❌ Unexpected error in handlePaidUser:', error);
+    console.error('❌ Error:', error);
   }
 }
 

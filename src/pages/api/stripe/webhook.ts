@@ -1,117 +1,120 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
-import { buffer } from 'micro';
+import { Readable } from 'stream';
 
-// Initialize Stripe with the correct API version
+// Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-06-30.basil', // Use current stable version
+  apiVersion: '2025-06-30.basil', // Use the version your Stripe package requires
 });
 
-// Add debug logging
-console.log('Webhook endpoint loaded. Environment check:', {
-  hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
-  hasWebhookSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
-});
-
-// CRITICAL: Disable body parsing - Next.js must NOT parse the body
+// CRITICAL: Disable body parsing
 export const config = {
   api: {
     bodyParser: false,
   },
 };
 
+// Helper function to get raw body
+async function getRawBody(req: NextApiRequest): Promise<string> {
+  const chunks: Uint8Array[] = [];
+  const readable = req as unknown as Readable;
+  
+  for await (const chunk of readable) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  
+  return Buffer.concat(chunks).toString('utf8');
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Test endpoint for debugging (remove in production!)
+  // Debug endpoint (remove in production)
   if (req.method === 'GET') {
     return res.status(200).json({ 
       status: 'Webhook endpoint active',
       hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
       hasWebhookSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
-      webhookSecretPreview: process.env.STRIPE_WEBHOOK_SECRET?.substring(0, 10) + '...'
+      timestamp: new Date().toISOString()
     });
   }
 
-  // Only allow POST requests
+  // Only allow POST
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).end('Method Not Allowed');
   }
 
-  // Get the signature from headers
-  const sig = req.headers['stripe-signature'] as string;
+  const sig = req.headers['stripe-signature'];
+  
+  // Handle case where header might be an array
+  const signature = Array.isArray(sig) ? sig[0] : sig;
 
-  if (!sig) {
+  if (!signature) {
     console.error('Missing stripe-signature header');
     return res.status(400).json({ error: 'Missing stripe-signature header' });
   }
 
   let event: Stripe.Event;
+  let rawBody: string;
 
   try {
-    // IMPORTANT: Get the raw body as a buffer
-    const buf = await buffer(req);
-    const rawBody = buf.toString('utf8');
+    // Get raw body without using micro
+    rawBody = await getRawBody(req);
     
-    console.log('Received webhook with signature:', sig.substring(0, 20) + '...');
-    console.log('Body length:', rawBody.length);
-    console.log('Using webhook secret:', process.env.STRIPE_WEBHOOK_SECRET?.substring(0, 10) + '...');
+    console.log('Webhook received:', {
+      bodyLength: rawBody.length,
+      signature: signature.substring(0, 20) + '...',
+      secretPreview: process.env.STRIPE_WEBHOOK_SECRET?.substring(0, 10) + '...'
+    });
     
-    // Construct the event using the raw body and signature
+    // Verify webhook
     event = stripe.webhooks.constructEvent(
       rawBody,
-      sig,
+      signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
+    
+    console.log('✅ Webhook verified! Event type:', event.type);
   } catch (err: any) {
-    console.error(`Webhook signature verification failed:`, err.message);
-    console.error('Full error:', err);
+    console.error('❌ Webhook error:', err.message);
     return res.status(400).json({ error: `Webhook Error: ${err.message}` });
   }
 
-  // Log successful verification
-  console.log('✅ Webhook verified, processing event:', event.type);
-
-  // Handle the event
+  // Handle events
   try {
     switch (event.type) {
       case 'checkout.session.completed':
         const session = event.data.object as Stripe.Checkout.Session;
-        
-        // Log the successful checkout
-        console.log('💰 Checkout completed!');
-        console.log('Session ID:', session.id);
-        console.log('Customer Email:', session.customer_email);
-        console.log('Payment Status:', session.payment_status);
+        console.log('💰 Payment completed!', {
+          sessionId: session.id,
+          customerEmail: session.customer_email,
+          amountTotal: session.amount_total
+        });
         
         // TODO: Add your business logic here
         // - Save to database
         // - Send welcome email
-        // - Grant access to product
-        // - etc.
+        // - Grant access
         
         break;
-      
+
       case 'payment_intent.succeeded':
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        console.log('💳 Payment succeeded:', paymentIntent.id);
+        console.log('💳 Payment succeeded');
         break;
-      
+
       case 'payment_intent.payment_failed':
-        const failedPayment = event.data.object as Stripe.PaymentIntent;
-        console.log('❌ Payment failed:', failedPayment.id);
+        console.log('❌ Payment failed');
         break;
-      
+
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        console.log('Unhandled event type:', event.type);
     }
   } catch (error) {
     console.error('Error processing webhook:', error);
-    // Still return 200 to acknowledge receipt
   }
 
-  // Always return 200 to acknowledge receipt of the event
+  // Always return 200
   res.status(200).json({ received: true });
 }

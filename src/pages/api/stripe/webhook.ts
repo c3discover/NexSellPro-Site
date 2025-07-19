@@ -9,9 +9,17 @@ export const config = {
   },
 };
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-06-30.basil',
-});
+const stripe = new Stripe(
+  process.env.NEXT_PUBLIC_IS_TESTING === "true"
+    ? process.env.TEST_STRIPE_SECRET_KEY!
+    : process.env.STRIPE_SECRET_KEY!,
+  { apiVersion: "2025-06-30.basil" }
+);
+
+const webhookSecret =
+  process.env.NEXT_PUBLIC_IS_TESTING === "true"
+    ? process.env.TEST_STRIPE_WEBHOOK_SECRET!
+    : process.env.STRIPE_WEBHOOK_SECRET!;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
@@ -22,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(buf, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+    event = stripe.webhooks.constructEvent(buf, sig, webhookSecret);
   } catch (err: any) {
     console.error('❌ Stripe webhook signature error:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);

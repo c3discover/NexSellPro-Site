@@ -184,7 +184,10 @@ export default function SignupPage() {
         email: form.email,
         password: form.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/post-signup-to-stripe`,
+          emailRedirectTo:
+            process.env.NODE_ENV === "production"
+              ? "https://nexsellpro.com/dashboard"
+              : "http://localhost:3000/dashboard",
           data: {
             first_name: form.firstName,
             last_name: form.lastName,
@@ -277,7 +280,10 @@ export default function SignupPage() {
         email: form.email,
         password: form.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/post-signup-to-stripe`,
+          emailRedirectTo:
+            process.env.NODE_ENV === "production"
+              ? "https://nexsellpro.com/dashboard"
+              : "http://localhost:3000/dashboard",
           data: {
             first_name: form.firstName,
             last_name: form.lastName,

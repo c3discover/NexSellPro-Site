@@ -13,6 +13,12 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
 
+  // Environment-aware Stripe payment link
+  const isProd = process.env.NODE_ENV === "production";
+  const stripeLink = isProd
+    ? "https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00"
+    : "https://buy.stripe.com/test_bJeeVddD856nfzCc0b6Zy00";
+
   // Check authentication and load user data on page load
   useEffect(() => {
     async function checkAuthAndLoadData() {
@@ -97,7 +103,7 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-3">
                 {userPlan?.plan === 'free' && (
                   <a
-                    href="https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00"
+                    href={stripeLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-primary px-4 py-2 text-sm font-medium"
@@ -251,7 +257,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <a
-                    href="https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00"
+                    href={stripeLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-accent hover:underline text-sm"

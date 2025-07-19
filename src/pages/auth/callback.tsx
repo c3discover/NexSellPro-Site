@@ -119,49 +119,52 @@ export default function AuthCallback() {
       const userMetadata = session.user.user_metadata;
 
       if (userId) {
-        // Create user profile if we have the data from signup
-        if (userMetadata?.first_name || userMetadata?.last_name) {
-          try {
-            const response = await fetch('/api/create-user-profile', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
+        // Handle signup-specific logic
+        if (type === 'signup') {
+          // Create user profile if we have the data from signup metadata
+          if (userMetadata?.first_name || userMetadata?.last_name) {
+            try {
+              // Insert user profile into user_profiles table
+              const profileData = {
+                user_id: userId,
                 first_name: userMetadata.first_name || '',
                 last_name: userMetadata.last_name || '',
-                business_name: userMetadata.business_name || '',
-                how_did_you_hear: userMetadata.how_did_you_hear || '',
-              }),
-            });
+                ...(userMetadata.business_name && { business_name: userMetadata.business_name }),
+                ...(userMetadata.how_did_you_hear && { how_did_you_hear: userMetadata.how_did_you_hear })
+              };
 
-            if (!response.ok) {
-              console.error('Failed to create user profile:', response.statusText);
-            } else {
-              console.log('User profile created successfully');
+              const { error: profileError } = await supabase.from("user_profiles").upsert(profileData);
+              
+              if (profileError) {
+                console.error('Failed to create user profile:', profileError);
+              } else {
+                console.log('User profile created successfully');
+              }
+            } catch (error) {
+              console.error('Error creating user profile:', error);
             }
-          } catch (error) {
-            console.error('Error creating user profile:', error);
           }
-        }
 
-        // INSERT A NEW ROW INTO user_plan IF MISSING
-        const { data: existingPlan } = await supabase
-          .from("user_plan")
-          .select("*")
-          .eq("user_id", userId)
-          .maybeSingle();
+          // Insert user into user_plan table (if not already inserted)
+          const { data: existingPlan } = await supabase
+            .from("user_plan")
+            .select("*")
+            .eq("user_id", userId)
+            .maybeSingle();
 
-        if (!existingPlan) {
-          const { error: insertError } = await supabase.from("user_plan").insert([
-            {
-              user_id: userId,
-              plan: "free",
-            },
-          ]);
+          if (!existingPlan) {
+            const { error: insertError } = await supabase.from("user_plan").insert([
+              {
+                user_id: userId,
+                plan: "free",
+              },
+            ]);
 
-          if (insertError) {
-            console.error("Insert failed:", insertError.message);
-          } else {
-    
+            if (insertError) {
+              console.error("Insert failed:", insertError.message);
+            } else {
+              console.log("User plan created successfully");
+            }
           }
         }
       }
@@ -171,7 +174,7 @@ export default function AuthCallback() {
     const redirectPath = (() => {
       switch (type) {
         case 'signup':
-          return '/post-signup-to-stripe';
+          return '/dashboard';
         case 'recovery':
           return '/reset-password';
         case 'magic_link':

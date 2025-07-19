@@ -22,6 +22,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
+import { createUserProfile } from '@/lib/auth-helpers';
 import Head from 'next/head';
 
 type AuthState = 'processing' | 'confirmed' | 'error';
@@ -137,6 +138,25 @@ export default function AuthCallback() {
             console.error("Insert failed:", insertError.message);
           } else {
     
+          }
+        }
+      }
+
+      // For signup users, create user profile using the API
+      if (type === 'signup' && session.user.user_metadata) {
+        const userData = {
+          first_name: session.user.user_metadata.first_name || '',
+          last_name: session.user.user_metadata.last_name || '',
+          business_name: session.user.user_metadata.business_name || undefined,
+          how_did_you_hear: session.user.user_metadata.how_did_you_hear || undefined,
+        };
+
+        // Only call if we have at least first_name and last_name
+        if (userData.first_name && userData.last_name) {
+          const profileResult = await createUserProfile(userData);
+          if (!profileResult.success) {
+            console.warn('Failed to create user profile:', profileResult.error);
+            // Don't fail the auth flow if profile creation fails
           }
         }
       }

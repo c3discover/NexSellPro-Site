@@ -54,28 +54,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
 
-    const email = session.customer_details?.email
-    const fullName = session.customer_details?.name || ''
-    const [first_name, last_name] = fullName.split(' ')
-    const stripe_customer_id = session.customer as string
-    const plan = 'founding'
+    // 👇 Extract customer info from the session
+    const customerId = session.customer as string;
+    const customerDetails = session.customer_details;
+    const email = customerDetails?.email;
+    const fullName = customerDetails?.name || '';
+    const [first_name, ...last_name_parts] = fullName.split(' ');
+    const last_name = last_name_parts.join(' ');
 
     if (!email) return res.status(400).json({ error: 'Missing Stripe customer email' })
 
-    // Create Supabase user_plan record
-    const { error } = await supabase.from('user_plan').insert({
+    // 👇 Insert or update in Supabase user_plan table
+    const { error } = await supabase.from('user_plan').upsert({
       email: email.toLowerCase(),
       first_name,
       last_name,
-      stripe_customer_id,
-      plan,
+      stripe_customer_id: customerId,
+      plan: 'founding',
       created_at: new Date().toISOString(),
       last_updated: new Date().toISOString(),
-    })
+    }, {
+      onConflict: 'email',
+    });
 
     if (error) {
-      console.error('Database insert failed:', error)
-      return res.status(500).json({ error: 'Database insert failed' })
+      console.error('Error saving user_plan from Stripe webhook:', error.message);
+      return res.status(500).json({ error: 'Database insert failed' });
     }
 
     return res.status(200).json({ received: true })

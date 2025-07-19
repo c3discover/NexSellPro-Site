@@ -516,3 +516,36 @@ export async function getSessionInfo(): Promise<{
 export async function forceSessionRefresh(): Promise<SessionPersistenceResult> {
   return ensureSessionPersistence({ forceRefresh: true });
 } 
+
+/**
+ * Creates user profile by calling the create-user-profile API endpoint
+ * This should be called after successful email verification and login
+ */
+export async function createUserProfile(userData: {
+  first_name: string;
+  last_name: string;
+  business_name?: string;
+  how_did_you_hear?: string;
+}) {
+  try {
+    const response = await fetch('/api/create-user-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create user profile');
+    }
+
+    const result = await response.json();
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error creating user profile:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error occurred' 
+    };
+  }
+} 

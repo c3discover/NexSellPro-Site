@@ -56,6 +56,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).send("Missing email")
     }
 
+    const { data: existingUser, error: fetchError } = await supabase
+      .from("user_plan")
+      .select("email")
+      .eq("email", email)
+      .single();
+
+    if (!existingUser) {
+      // Invite the user if they haven't signed up
+      const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/signup?fromStripe=true`,
+      });
+
+      if (inviteError) {
+        console.error("Failed to send invite:", inviteError.message);
+        return res.status(500).json({ error: "Failed to invite user" });
+      }
+
+      console.log("Invite email sent to:", email);
+    }
+
     const { error } = await supabase.from("user_plan").upsert({
       email: email.toLowerCase(),
       plan: "beta",

@@ -184,10 +184,7 @@ export default function SignupPage() {
         email: form.email,
         password: form.password,
         options: {
-          emailRedirectTo:
-            process.env.NODE_ENV === "production"
-              ? "https://nexsellpro.com/dashboard"
-              : "http://localhost:3000/dashboard",
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
           data: {
             first_name: form.firstName,
             last_name: form.lastName,
@@ -280,10 +277,7 @@ export default function SignupPage() {
         email: form.email,
         password: form.password,
         options: {
-          emailRedirectTo:
-            process.env.NODE_ENV === "production"
-              ? "https://nexsellpro.com/dashboard"
-              : "http://localhost:3000/dashboard",
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
           data: {
             first_name: form.firstName,
             last_name: form.lastName,

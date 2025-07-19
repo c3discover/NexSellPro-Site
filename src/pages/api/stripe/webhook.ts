@@ -1,5 +1,4 @@
-// In src/pages/api/stripe/webhook.ts
-// Fixes: Stripe webhook missing customer info
+// Fix webhook to stop relying on session.customer and use session.customer_details instead
 
 import type { NextApiRequest, NextApiResponse } from "next";
 import { buffer } from "micro";
@@ -12,9 +11,10 @@ export const config = {
   },
 };
 
-const stripe = new Stripe(process.env.NEXT_PUBLIC_IS_TESTING === "true"
-  ? process.env.TEST_STRIPE_SECRET_KEY!
-  : process.env.STRIPE_SECRET_KEY!,
+const stripe = new Stripe(
+  process.env.NEXT_PUBLIC_IS_TESTING === "true"
+    ? process.env.TEST_STRIPE_SECRET_KEY!
+    : process.env.STRIPE_SECRET_KEY!,
   { apiVersion: "2025-06-30.basil" }
 );
 
@@ -23,9 +23,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const webhookSecret = process.env.NEXT_PUBLIC_IS_TESTING === "true"
-  ? process.env.TEST_STRIPE_WEBHOOK_SECRET!
-  : process.env.STRIPE_WEBHOOK_SECRET!;
+const webhookSecret =
+  process.env.NEXT_PUBLIC_IS_TESTING === "true"
+    ? process.env.TEST_STRIPE_WEBHOOK_SECRET!
+    : process.env.STRIPE_WEBHOOK_SECRET!;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -45,29 +46,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).send(`Webhook Error: ${err instanceof Error ? err.message : "Unknown error"}`);
   }
 
-  // Expand customer in the session object
   if (event.type === "checkout.session.completed") {
-    const session = await stripe.checkout.sessions.retrieve(
-      event.data.object.id,
-      {
-        expand: ["customer"],
-      }
-    );
+    const session = event.data.object as Stripe.Checkout.Session;
+    const details = session.customer_details;
 
-    const customer = session.customer as Stripe.Customer;
-    const email = session.customer_details?.email || customer.email;
-    const stripeCustomerId = session.customer?.toString();
-
-    if (!stripeCustomerId || !email) {
-      console.error("Missing Stripe customer info", { stripeCustomerId, email });
-      return res.status(400).json({ error: "Missing Stripe customer info" });
+    if (!details?.email) {
+      console.error("Missing email in customer_details", details);
+      return res.status(400).json({ error: "Missing Stripe customer email" });
     }
 
     const { error } = await supabase.from("user_plan").insert([
       {
-        email,
+        email: details.email.toLowerCase(),
         plan: "founding",
-        stripe_customer_id: stripeCustomerId,
+        stripe_customer_id: session.customer?.toString() || null,
+        created_at: new Date().toISOString(),
+        last_updated: new Date().toISOString(),
       },
     ]);
 

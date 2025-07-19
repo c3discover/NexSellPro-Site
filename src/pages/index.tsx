@@ -16,14 +16,7 @@ import Link from 'next/link';
 ////////////////////////////////////////////////
 // Environment-specific Stripe links:
 ////////////////////////////////////////////////
-const isTesting = process.env.NEXT_PUBLIC_IS_TESTING === "true";
-const isProd = process.env.NODE_ENV === "production" && !isTesting;
-const stripeLink = isProd
-  ? "https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00" // Live
-  : "https://buy.stripe.com/test_bJeeVddD856nfzCc0b6Zy00"; // Test
-
-// Debug logging
-console.log(`Stripe link loaded in ${isProd ? "PRODUCTION (live mode)" : "TEST mode"}`);
+// Stripe links will be determined at runtime in the component
 
 ////////////////////////////////////////////////
 // Types and Interfaces:
@@ -34,6 +27,16 @@ console.log(`Stripe link loaded in ${isProd ? "PRODUCTION (live mode)" : "TEST m
 // Page Component:
 ////////////////////////////////////////////////
 export default function HomePage() {
+  // Environment-specific Stripe link logic (runtime evaluation)
+  const isTesting = process.env.NEXT_PUBLIC_IS_TESTING === "true";
+  const isProd = process.env.NODE_ENV === "production" && !isTesting;
+  const stripeLink = isProd
+    ? "https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00" // Live
+    : "https://buy.stripe.com/test_bJeeVddD856nfzCc0b6Zy00"; // Test
+
+  // Debug logging
+  console.log(`Stripe link loaded in ${isProd ? "PRODUCTION (live mode)" : "TEST mode"}`);
+
   return (
     <>
       <Head>
@@ -69,14 +72,14 @@ export default function HomePage() {
       </header>
 
       <main className="min-h-screen bg-white">
-        <HeroSection />
+        <HeroSection stripeLink={stripeLink} />
         <BenefitsSection />
         <FeaturesSection />
         <HowItWorksSection />
-        <PricingSection />
+        <PricingSection stripeLink={stripeLink} />
         <TargetAudienceSection />
         <FAQSection />
-        <FooterSection />
+        <FooterSection stripeLink={stripeLink} />
       </main>
     </>
   );
@@ -110,7 +113,7 @@ export default function HomePage() {
 /**
  * Hero Section - The first thing visitors see
  */
-function HeroSection() {
+function HeroSection({ stripeLink }: { stripeLink: string }) {
 
   return (
     <section id="hero" className="bg-gradient-to-b from-slate-50 to-white px-4 py-16 md:py-24 scroll-mt-28">
@@ -334,7 +337,7 @@ function HowItWorksSection() {
 /**
  * Pricing Section - Founding Member special
  */
-function PricingSection() {
+function PricingSection({ stripeLink }: { stripeLink: string }) {
 
   return (
     <section id="pricing" className="px-4 py-16 bg-gradient-to-b from-white to-slate-50 scroll-mt-28">
@@ -516,7 +519,7 @@ function FAQSection() {
 /**
  * Footer Section - Final CTA and contact info
  */
-function FooterSection() {
+function FooterSection({ stripeLink }: { stripeLink: string }) {
 
   return (
     <footer className="px-4 py-16 bg-gray-900 text-white">

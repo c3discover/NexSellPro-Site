@@ -13,7 +13,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
 
-  // Environment-aware Stripe payment link
+  // Environment-aware Stripe payment link (runtime evaluation)
   const isTesting = process.env.NEXT_PUBLIC_IS_TESTING === "true";
   const isProd = process.env.NODE_ENV === "production" && !isTesting;
   const stripeLink = isProd

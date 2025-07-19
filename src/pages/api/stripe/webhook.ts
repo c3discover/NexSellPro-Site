@@ -55,19 +55,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: "Missing Stripe customer email" });
     }
 
-    const { error } = await supabase.from("user_plan").insert([
+    const { data, error } = await supabase.from("user_plan").insert([
       {
         email: details.email.toLowerCase(),
         plan: "founding",
         stripe_customer_id: session.customer?.toString() || null,
         created_at: new Date().toISOString(),
         last_updated: new Date().toISOString(),
+        // No 'id' field passed — Supabase will use gen_random_uuid()
       },
     ]);
 
     if (error) {
-      console.error("Supabase insert error:", error);
-      return res.status(500).json({ error: "Database insert failed" });
+      console.error("❌ Supabase insert error:", error);
+      return res.status(500).json({ error: "Database insert failed", details: error.message });
     }
 
     return res.status(200).json({ received: true });

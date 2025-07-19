@@ -54,26 +54,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
 
-    // 👇 Extract customer info from the session
+    // ✅ Safely parse fields
     const customerId = session.customer as string;
     const customerDetails = session.customer_details;
-    const email = customerDetails?.email;
+    const email = customerDetails?.email || '';
     const fullName = customerDetails?.name || '';
     const [first_name, ...last_name_parts] = fullName.split(' ');
     const last_name = last_name_parts.join(' ');
 
     if (!email) return res.status(400).json({ error: 'Missing Stripe customer email' })
 
-    // 👇 Insert or update in Supabase user_plan table
-    const { error } = await supabase.from('user_plan').upsert({
+    // ✅ Clean object without nulls
+    const userPlan = {
       email: email.toLowerCase(),
-      first_name,
-      last_name,
-      stripe_customer_id: customerId,
+      first_name: first_name || undefined,
+      last_name: last_name || undefined,
+      stripe_customer_id: customerId || undefined,
       plan: 'founding',
       created_at: new Date().toISOString(),
       last_updated: new Date().toISOString(),
-    }, {
+    };
+
+    const { error } = await supabase.from('user_plan').upsert(userPlan, {
       onConflict: 'email',
     });
 

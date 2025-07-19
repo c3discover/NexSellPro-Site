@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { buffer } from 'micro';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
 export const config = {
   api: {
@@ -20,6 +20,12 @@ const webhookSecret =
   process.env.NEXT_PUBLIC_IS_TESTING === "true"
     ? process.env.TEST_STRIPE_WEBHOOK_SECRET!
     : process.env.STRIPE_WEBHOOK_SECRET!;
+
+// Create Supabase client with service role key for server-side operations
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
@@ -45,6 +51,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const [firstName, ...lastParts] = name.split(' ');
     const lastName = lastParts.join(' ');
 
+    console.log('📝 Processing webhook for:', { email, firstName, lastName, stripeCustomerId });
+
     const { error } = await supabase.from('user_plan').upsert(
       {
         email,
@@ -58,6 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (error) {
       console.error('❌ Supabase insert failed:', error.message);
+      console.error('❌ Full error details:', error);
       return res.status(500).json({ error: 'Database insert failed' });
     }
 

@@ -22,7 +22,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
-import { createUserProfile } from '@/lib/auth-helpers';
 import Head from 'next/head';
 
 type AuthState = 'processing' | 'confirmed' | 'error';
@@ -116,10 +115,35 @@ export default function AuthCallback() {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (session?.user) {
-      // INSERT A NEW ROW INTO user_plan IF MISSING
       const userId = session.user.id;
+      const userMetadata = session.user.user_metadata;
 
       if (userId) {
+        // Create user profile if we have the data from signup
+        if (userMetadata?.first_name || userMetadata?.last_name) {
+          try {
+            const response = await fetch('/api/create-user-profile', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                first_name: userMetadata.first_name || '',
+                last_name: userMetadata.last_name || '',
+                business_name: userMetadata.business_name || '',
+                how_did_you_hear: userMetadata.how_did_you_hear || '',
+              }),
+            });
+
+            if (!response.ok) {
+              console.error('Failed to create user profile:', response.statusText);
+            } else {
+              console.log('User profile created successfully');
+            }
+          } catch (error) {
+            console.error('Error creating user profile:', error);
+          }
+        }
+
+        // INSERT A NEW ROW INTO user_plan IF MISSING
         const { data: existingPlan } = await supabase
           .from("user_plan")
           .select("*")
@@ -138,25 +162,6 @@ export default function AuthCallback() {
             console.error("Insert failed:", insertError.message);
           } else {
     
-          }
-        }
-      }
-
-      // For signup users, create user profile using the API
-      if (type === 'signup' && session.user.user_metadata) {
-        const userData = {
-          first_name: session.user.user_metadata.first_name || '',
-          last_name: session.user.user_metadata.last_name || '',
-          business_name: session.user.user_metadata.business_name || undefined,
-          how_did_you_hear: session.user.user_metadata.how_did_you_hear || undefined,
-        };
-
-        // Only call if we have at least first_name and last_name
-        if (userData.first_name && userData.last_name) {
-          const profileResult = await createUserProfile(userData);
-          if (!profileResult.success) {
-            console.warn('Failed to create user profile:', profileResult.error);
-            // Don't fail the auth flow if profile creation fails
           }
         }
       }

@@ -7,7 +7,7 @@
 import { buffer } from 'micro'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import Stripe from 'stripe'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 
 const isTesting = process.env.NEXT_PUBLIC_IS_TESTING === 'true'
 
@@ -47,53 +47,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
     const customerEmail = session.customer_details?.email?.toLowerCase()
+    const stripeCustomerId = session.customer
 
-    if (!customerEmail) {
-      console.error('❌ No customer email in session')
-      return res.status(400).send('No customer email found')
+    if (!customerEmail || !stripeCustomerId) {
+      console.error('❌ Missing customer email or ID')
+      return res.status(400).json({ error: 'Missing Stripe customer info' })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-
     try {
-      // Look up existing auth user by email
-      const { data: user, error } = await supabase
-        .from('user_plan')
+      // Find the Supabase user by email
+      const { data: user, error: userError } = await supabase
+        .from('users') // this references the Auth table, not user_plan
         .select('id')
         .eq('email', customerEmail)
         .single()
 
-      if (error && error.code !== 'PGRST116') {
-        throw error
+      if (userError || !user) {
+        console.error('❌ Supabase user lookup failed:', userError)
+        return res.status(404).json({ error: 'User not found in Supabase' })
       }
 
-      const now = new Date().toISOString()
-
-      if (user) {
-        // Update existing user_plan
-        await supabase
-          .from('user_plan')
-          .update({
-            plan: 'beta',
-            is_paid: true,
-            last_updated: now,
-          })
-          .eq('id', user.id)
-      } else {
-        // Create new row
-        await supabase.from('user_plan').insert({
+      // Insert into user_plan table
+      const { error: insertError } = await supabase.from('user_plan').insert([
+        {
+          id: user.id,
           email: customerEmail,
-          plan: 'beta',
-          is_paid: true,
-          created_at: now,
-          last_updated: now,
-        })
+          plan: 'founding',
+          stripe_customer_id: stripeCustomerId,
+        },
+      ])
+
+      if (insertError) {
+        console.error('❌ Insert to user_plan failed:', insertError)
+        return res.status(500).json({ error: 'Failed to insert plan info' })
       }
 
-      console.log(`✅ Plan updated for ${customerEmail}`)
+      console.log(`✅ user_plan updated for: ${customerEmail}`)
       return res.status(200).json({ received: true })
     } catch (err) {
       console.error('❌ Supabase update error:', err)

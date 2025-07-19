@@ -1,6 +1,3 @@
-// Full update to webhook.ts
-// Adds first_name, last_name, and stripe_customer_id from Stripe session
-
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { buffer } from 'micro'
 import Stripe from 'stripe'

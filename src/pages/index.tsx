@@ -16,9 +16,14 @@ import Link from 'next/link';
 ////////////////////////////////////////////////
 // Environment-specific Stripe links:
 ////////////////////////////////////////////////
-const stripeLink = process.env.NODE_ENV === 'production' 
-  ? "https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00" 
-  : "https://buy.stripe.com/test_bJeeVddD856nfzCc0b6Zy00";
+const isTesting = process.env.NEXT_PUBLIC_IS_TESTING === "true";
+const isProd = process.env.NODE_ENV === "production" && !isTesting;
+const stripeLink = isProd
+  ? "https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00" // Live
+  : "https://buy.stripe.com/test_bJeeVddD856nfzCc0b6Zy00"; // Test
+
+// Debug logging
+console.log(`Stripe link loaded in ${isProd ? "PRODUCTION (live mode)" : "TEST mode"}`);
 
 ////////////////////////////////////////////////
 // Types and Interfaces:

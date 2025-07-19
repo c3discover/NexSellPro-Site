@@ -12,18 +12,23 @@ export const config = {
   },
 }
 
-const stripe = new Stripe(process.env.NODE_ENV === "production"
-  ? process.env.STRIPE_SECRET_KEY!
-  : process.env.TEST_STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-06-30.basil",
-})
+// Environment-aware Stripe configuration
+const isTesting = process.env.NEXT_PUBLIC_IS_TESTING === "true";
+const isProd = process.env.NODE_ENV === "production" && !isTesting;
+
+const stripe = new Stripe(
+  isProd ? process.env.STRIPE_SECRET_KEY! : process.env.TEST_STRIPE_SECRET_KEY!,
+  {
+    apiVersion: "2025-06-30.basil",
+  }
+)
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const webhookSecret = process.env.NODE_ENV === "production"
+const webhookSecret = isProd
   ? process.env.STRIPE_WEBHOOK_SECRET!
   : process.env.TEST_STRIPE_WEBHOOK_SECRET!
 

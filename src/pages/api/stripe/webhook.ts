@@ -53,16 +53,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('📝 Processing webhook for:', { email, firstName, lastName, stripeCustomerId });
 
-    const { error } = await supabase.from('user_plan').upsert(
-      {
-        email,
-        first_name: firstName || null,
-        last_name: lastName || null,
-        stripe_customer_id: stripeCustomerId || null,
-        plan: 'founding',
-      },
-      { onConflict: 'email' }
-    );
+    // For webhook context, we need to bypass RLS and handle the insert differently
+    const { error } = await supabase
+      .from('user_plan')
+      .upsert(
+        {
+          id: crypto.randomUUID(), // Generate UUID for webhook inserts
+          email,
+          first_name: firstName || null,
+          last_name: lastName || null,
+          stripe_customer_id: stripeCustomerId || null,
+          plan: 'founding',
+        },
+        { 
+          onConflict: 'email',
+          ignoreDuplicates: false
+        }
+      );
 
     if (error) {
       console.error('❌ Supabase insert failed:', error.message);

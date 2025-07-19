@@ -1,20 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
-import { supabase } from '@/lib/supabase';
 import { buffer } from 'micro';
+import { supabase } from '@/lib/supabase';
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, // Prevent Next.js from parsing body
   },
 };
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-06-30.basil',
+  apiVersion: '2022-11-15',
 });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).end('Method Not Allowed');
+  if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
   const sig = req.headers['stripe-signature']!;
   const buf = await buffer(req);
@@ -23,9 +23,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     event = stripe.webhooks.constructEvent(buf, sig, process.env.STRIPE_WEBHOOK_SECRET!);
-  } catch (err) {
-    console.error('❌ Stripe webhook error:', err);
-    return res.status(400).send(`Webhook Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+  } catch (err: any) {
+    console.error('❌ Stripe webhook signature error:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
   if (event.type === 'checkout.session.completed') {
@@ -37,21 +37,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const [firstName, ...lastParts] = name.split(' ');
     const lastName = lastParts.join(' ');
 
-    const { error } = await supabase
-      .from('user_plan')
-      .upsert(
-        {
-          email,
-          first_name: firstName || null,
-          last_name: lastName || null,
-          stripe_customer_id: stripeCustomerId || null,
-          plan: 'founding',
-        },
-        { onConflict: 'email' }
-      );
+    const { error } = await supabase.from('user_plan').upsert(
+      {
+        email,
+        first_name: firstName || null,
+        last_name: lastName || null,
+        stripe_customer_id: stripeCustomerId || null,
+        plan: 'founding',
+      },
+      { onConflict: 'email' }
+    );
 
     if (error) {
-      console.error('❌ DB upsert failed:', error.message);
+      console.error('❌ Supabase insert failed:', error.message);
       return res.status(500).json({ error: 'Database insert failed' });
     }
 

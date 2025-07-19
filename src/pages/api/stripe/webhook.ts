@@ -1,53 +1,66 @@
-// src/pages/api/stripe/webhook.ts
-
-import type { NextApiRequest, NextApiResponse } from 'next'
-import { buffer } from 'micro'
-import Stripe from 'stripe'
-import { supabase } from '@/lib/supabase'
+import type { NextApiRequest, NextApiResponse } from 'next';
+import Stripe from 'stripe';
+import { buffer } from 'micro';
+import { supabase } from '@/lib/supabase';
 
 export const config = {
   api: {
     bodyParser: false,
+    externalResolver: true,
   },
-}
+};
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-06-30.basil',
-})
+});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).end('Method Not Allowed')
+  if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
-  const sig = req.headers['stripe-signature']!
-  const buf = await buffer(req)
+  const sig = req.headers['stripe-signature'];
+  if (!sig) return res.status(400).send('Missing Stripe signature');
 
-  let event: Stripe.Event
+  let event: Stripe.Event;
+  const buf = await buffer(req);
+
   try {
-    event = stripe.webhooks.constructEvent(buf, sig, process.env.STRIPE_WEBHOOK_SECRET!)
-  } catch (err: any) {
-    console.error('❌ Stripe webhook error:', err.message)
-    return res.status(400).send(`Webhook Error: ${err.message}`)
+    event = stripe.webhooks.constructEvent(buf, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+  } catch (err) {
+    console.error('❌ Stripe signature validation failed:', err);
+    return res.status(400).send(`Webhook Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
   }
 
   if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session
+    const session = event.data.object as Stripe.Checkout.Session;
 
-    const email = session.customer_details?.email ?? ''
-    const name = session.customer_details?.name ?? ''
-    const stripeCustomerId = session.customer ?? ''
-    const [firstName, ...lastParts] = name.split(' ')
-    const lastName = lastParts.join(' ')
+    const email = session.customer_details?.email;
+    const name = session.customer_details?.name ?? '';
+    const stripeCustomerId = session.customer ?? '';
 
-    // Optional: Lookup user ID by email
-    const { data: user, error: fetchError } = await supabase
-      .from('user_plan')
-      .select('uuid')
+    const [firstName, ...rest] = name.split(' ');
+    const lastName = rest.join(' ');
+
+    console.log('🧠 Stripe webhook received:', { email, stripeCustomerId });
+
+    // 🔍 Try to find matching uuid from user_profiles table
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('user_id')
       .eq('email', email)
-      .single()
+      .maybeSingle();
 
-    const uuid = user?.uuid ?? undefined
+    if (profileError) {
+      console.error('❌ Error looking up profile:', profileError.message);
+      return res.status(500).json({ error: 'Profile lookup failed' });
+    }
 
-    const { error } = await supabase
+    const uuid = profile?.user_id;
+    if (!uuid) {
+      console.warn('⚠️ No matching profile found for email:', email);
+      return res.status(200).json({ message: 'No profile found — skipping user_plan insert' });
+    }
+
+    const { error: upsertError } = await supabase
       .from('user_plan')
       .upsert(
         {
@@ -59,15 +72,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           plan: 'founding',
         },
         { onConflict: 'uuid' }
-      )
+      );
 
-    if (error) {
-      console.error('❌ DB upsert failed:', error.message)
-      return res.status(500).json({ error: 'Database insert failed' })
+    if (upsertError) {
+      console.error('❌ Failed to upsert user_plan:', upsertError.message);
+      return res.status(500).json({ error: 'Database insert failed' });
     }
 
-    console.log('✅ Stripe webhook handled successfully')
+    console.log('✅ Stripe webhook handled successfully');
+    return res.status(200).json({ received: true });
   }
 
-  return res.status(200).json({ received: true })
+  return res.status(200).json({ received: true });
 }

@@ -171,6 +171,44 @@ export default function DashboardPage() {
               </a>
             </div>
 
+            {/* Founding Member Bonus Section - Only shown to beta plan users */}
+            {userPlan?.plan === 'beta' && (
+              <div className="card p-8">
+                <h2 className="text-2xl font-bold mb-4 gradient-text">
+                  🎁 Founding Member Bonus
+                </h2>
+                <p className="text-gray-300 mb-6">
+                  Thanks for supporting NexSellPro early. Here&rsquo;s your exclusive bonus:
+                </p>
+                <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="text-4xl">📖</div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-white mb-1">
+                          Ultimate Walmart Marketplace Guide
+                        </h3>
+                        <p className="text-gray-400 text-sm">
+                          Exclusive strategies and insights for founding members
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href="/bonus/founding-member-guide.pdf"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-primary inline-flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                      Download Guide
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Quick Stats */}
             <div className="grid md:grid-cols-3 gap-6">
               <div className="card p-6 text-center">

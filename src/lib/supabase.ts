@@ -73,7 +73,7 @@ export interface UserProfile {
 export interface UserPlan {
   id: string;
   user_id: string;
-  plan: 'free' | 'premium' | 'enterprise';
+  plan: 'free' | 'premium' | 'enterprise' | 'beta';
   created_at: string;
   updated_at: string;
 }

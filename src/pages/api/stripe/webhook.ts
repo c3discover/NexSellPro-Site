@@ -1,7 +1,10 @@
+// Full update to webhook.ts
+// Adds first_name, last_name, and stripe_customer_id from Stripe session
+
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { buffer } from 'micro'
 import Stripe from 'stripe'
-import { supabase } from '@/lib/supabase' // or your actual Supabase client import
+import { createClient } from "@supabase/supabase-js"
 
 export const config = {
   api: {
@@ -9,23 +12,39 @@ export const config = {
   },
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-06-30.basil',
-})
+const stripe = new Stripe(
+  process.env.NEXT_PUBLIC_IS_TESTING === "true"
+    ? process.env.TEST_STRIPE_SECRET_KEY!
+    : process.env.STRIPE_SECRET_KEY!,
+  { apiVersion: "2025-06-30.basil" }
+)
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+const webhookSecret =
+  process.env.NEXT_PUBLIC_IS_TESTING === "true"
+    ? process.env.TEST_STRIPE_WEBHOOK_SECRET!
+    : process.env.STRIPE_WEBHOOK_SECRET!
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).end('Method Not Allowed')
+  if (req.method !== 'POST') {
+    res.setHeader("Allow", "POST");
+    return res.status(405).end('Method Not Allowed')
+  }
 
   const buf = await buffer(req)
-  const sig = req.headers['stripe-signature']
+  const sig = req.headers['stripe-signature'] as string
 
   let event: Stripe.Event
 
   try {
     event = stripe.webhooks.constructEvent(
       buf,
-      sig!,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      sig,
+      webhookSecret
     )
   } catch (err: any) {
     console.error('Webhook Error:', err.message)
@@ -45,11 +64,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Create Supabase user_plan record
     const { error } = await supabase.from('user_plan').insert({
-      email,
+      email: email.toLowerCase(),
       first_name,
       last_name,
       stripe_customer_id,
       plan,
+      created_at: new Date().toISOString(),
+      last_updated: new Date().toISOString(),
     })
 
     if (error) {

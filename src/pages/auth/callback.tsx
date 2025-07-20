@@ -119,53 +119,65 @@ export default function AuthCallback() {
       const userMetadata = session.user.user_metadata;
 
       if (userId) {
-        // Handle signup-specific logic
-        if (type === 'signup') {
-          // Create user profile if we have the data from signup metadata
-          if (userMetadata?.first_name || userMetadata?.last_name) {
-            try {
-              // Insert user profile into user_profiles table
-              const profileData = {
-                user_id: userId,
-                first_name: userMetadata.first_name || '',
-                last_name: userMetadata.last_name || '',
-                ...(userMetadata.business_name && { business_name: userMetadata.business_name }),
-                ...(userMetadata.how_did_you_hear && { how_did_you_hear: userMetadata.how_did_you_hear })
-              };
+        // Create/update user profile for ALL authenticated users
+        try {
+          // Prepare profile data from user metadata
+          const profileData = {
+            user_id: userId,
+            first_name: userMetadata?.first_name || '',
+            last_name: userMetadata?.last_name || '',
+            ...(userMetadata?.business_name && { business_name: userMetadata.business_name }),
+            ...(userMetadata?.how_did_you_hear && { how_did_you_hear: userMetadata.how_did_you_hear })
+          };
 
-              const { error: profileError } = await supabase.from("user_profiles").upsert(profileData);
-              
-              if (profileError) {
-                console.error('Failed to create user profile:', profileError);
-              } else {
-                console.log('User profile created successfully');
-              }
-            } catch (error) {
-              console.error('Error creating user profile:', error);
-            }
+          // Upsert user profile (will create if doesn't exist, update if exists)
+          const { error: profileError } = await supabase
+            .from("user_profiles")
+            .upsert(profileData, { onConflict: 'user_id' });
+          
+          if (profileError) {
+            console.error('[Auth Callback] Failed to upsert user profile:', profileError);
+          } else {
+            console.log('[Auth Callback] User profile upserted successfully');
           }
+        } catch (error) {
+          console.error('[Auth Callback] Error upserting user profile:', error);
+        }
 
-          // Insert user into user_plan table (if not already inserted)
-          const { data: existingPlan } = await supabase
+        // Create/update user plan for ALL authenticated users
+        try {
+          // Check if user plan already exists
+          const { data: existingPlan, error: selectError } = await supabase
             .from("user_plan")
-            .select("*")
+            .select("plan")
             .eq("user_id", userId)
             .maybeSingle();
 
-          if (!existingPlan) {
-            const { error: insertError } = await supabase.from("user_plan").insert([
-              {
-                user_id: userId,
-                plan: "free",
-              },
-            ]);
-
-            if (insertError) {
-              console.error("Insert failed:", insertError.message);
-            } else {
-              console.log("User plan created successfully");
-            }
+          if (selectError) {
+            console.error('[Auth Callback] Error checking existing user plan:', selectError);
           }
+
+          // Only create plan if it doesn't exist, or update if needed
+          if (!existingPlan) {
+            const planData = {
+              user_id: userId,
+              plan: userMetadata?.plan || 'free'
+            };
+
+            const { error: planError } = await supabase
+              .from("user_plan")
+              .upsert(planData, { onConflict: 'user_id' });
+
+            if (planError) {
+              console.error('[Auth Callback] Failed to upsert user plan:', planError);
+            } else {
+              console.log('[Auth Callback] User plan upserted successfully');
+            }
+          } else {
+            console.log('[Auth Callback] User plan already exists:', existingPlan.plan);
+          }
+        } catch (error) {
+          console.error('[Auth Callback] Error upserting user plan:', error);
         }
       }
     }

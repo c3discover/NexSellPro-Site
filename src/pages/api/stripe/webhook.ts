@@ -50,33 +50,64 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
-
+  
     const email = session.customer_details?.email
     const fullName = session.customer_details?.name || ''
     const [first_name, last_name] = fullName.split(' ')
     const stripe_customer_id = session.customer as string
-    const plan = 'founding'
-
-    if (!email) return res.status(400).json({ error: 'Missing Stripe customer email' })
-
-    // Create Supabase user_plan record
-    const { error } = await supabase.from('user_plan').insert({
-      email: email.toLowerCase(),
-      first_name,
-      last_name,
-      stripe_customer_id,
-      plan,
-      created_at: new Date().toISOString(),
-      last_updated: new Date().toISOString(),
-    })
-
-    if (error) {
-      console.error('Database insert failed:', error)
-      return res.status(500).json({ error: 'Database insert failed' })
+  
+    if (!email) return res.status(400).json({ error: 'Missing customer email' })
+  
+    // First, find the user by email in the auth.users table
+    const { data: userData, error: userError } = await supabase.auth.admin.listUsers()
+    
+    if (userError) {
+      console.error('Failed to list users:', userError)
+      return res.status(500).json({ error: 'Failed to find user' })
     }
-
+  
+    // Find the user with matching email
+    const user = userData.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+    
+    if (!user) {
+      console.error('No user found with email:', email)
+      return res.status(404).json({ error: 'User not found' })
+    }
+  
+    // Update the user's plan (not insert a new record!)
+    const { error: planError } = await supabase
+      .from('user_plan')
+      .update({
+        plan: 'founding',
+        stripe_customer_id,
+        first_name,
+        last_name,
+        last_updated: new Date().toISOString()
+      })
+      .eq('id', user.id)  // Use the actual user's ID!
+  
+    if (planError) {
+      // If update fails, the user might not have a plan record yet
+      // Try to insert one
+      const { error: insertError } = await supabase
+        .from('user_plan')
+        .insert({
+          id: user.id,  // Use the actual user's ID!
+          email: email.toLowerCase(),
+          first_name,
+          last_name,
+          plan: 'founding',
+          stripe_customer_id,
+          created_at: new Date().toISOString(),
+          last_updated: new Date().toISOString()
+        })
+  
+      if (insertError) {
+        console.error('Failed to create user plan:', insertError)
+        return res.status(500).json({ error: 'Failed to update user plan' })
+      }
+    }
+  
     return res.status(200).json({ received: true })
   }
-
-  res.status(200).json({ received: true })
 }

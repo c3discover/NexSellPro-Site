@@ -386,9 +386,9 @@ function PricingSection({ stripeLink }: { stripeLink: string }) {
           </ul>
           
           {/* CTA button */}
-          {/* Redirects to environment-specific Stripe Checkout */}
+          {/* Redirects to signup page for beta users */}
           <a 
-            href={stripeLink}
+            href="/signup?plan=founding"
             className="block w-full bg-blue-600 text-white py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
           >
             Claim Your Founding Member Spot

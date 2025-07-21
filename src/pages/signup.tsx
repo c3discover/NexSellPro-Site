@@ -53,6 +53,16 @@ export default function SignupPage() {
   const router = useRouter();
   const captchaRef = useRef<ReCAPTCHA>(null);
 
+  // Check if this is a beta signup from pricing page
+  const isBetaSignup = router.query.plan === 'founding';
+
+  // Environment-aware Stripe payment link (runtime evaluation)
+  const isTesting = process.env.NEXT_PUBLIC_IS_TESTING === "true";
+  const isProd = process.env.NODE_ENV === "production" && !isTesting;
+  const stripeLink = isProd
+    ? "https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00" // Live
+    : "https://buy.stripe.com/test_bJeeVddD856nfzCc0b6Zy00"; // Test
+
   // Log the reCAPTCHA site key for debugging
 
 
@@ -250,14 +260,21 @@ export default function SignupPage() {
         }
       }
 
-      // Step 3: Show success state
-      setState(prev => ({
-        ...prev,
-        success: true,
-        loading: false,
-        redirectCountdown: 30,
-        captchaToken: '' // Clear captcha token after successful signup
-      }));
+      // Step 3: Handle success based on signup type
+      if (isBetaSignup && data.user) {
+        // For beta signup, redirect to Stripe immediately
+        const redirectUrl = `${stripeLink}?client_reference_id=${data.user.id}&prefilled_email=${encodeURIComponent(data.user.email || '')}`;
+        window.location.href = redirectUrl;
+      } else {
+        // For regular signup, show success state
+        setState(prev => ({
+          ...prev,
+          success: true,
+          loading: false,
+          redirectCountdown: 30,
+          captchaToken: '' // Clear captcha token after successful signup
+        }));
+      }
 
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Unexpected error. Please try again.';
@@ -312,8 +329,12 @@ export default function SignupPage() {
       </Head>
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 px-4">
         <div className="card max-w-lg w-full mx-auto p-8 md:p-10 glass animate-fadeIn shadow-xl">
-          <h1 className="text-3xl font-bold text-center mb-2 gradient-text">Create your NexSellPro account</h1>
-          <p className="text-center text-gray-400 mb-6">Join thousands of sellers finding profitable products on Walmart Marketplace</p>
+          <h1 className="text-3xl font-bold text-center mb-2 gradient-text">
+            {isBetaSignup ? "Almost There! Create Your Account" : "Create your NexSellPro account"}
+          </h1>
+          <p className="text-center text-gray-400 mb-6">
+            {isBetaSignup ? "Just 30 seconds to unlock your Founding Member access" : "Join thousands of sellers finding profitable products on Walmart Marketplace"}
+          </p>
 
           {state.success ? (
             <div className="text-center">
@@ -451,22 +472,24 @@ export default function SignupPage() {
                   {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
                 </div>
 
-                {/* Business Name (Optional) */}
-                <div className="relative">
-                  <label htmlFor="businessName" className="block text-sm font-medium text-gray-200 mb-1">Business Name (Optional)</label>
-                  <input
-                    id="businessName"
-                    name="businessName"
-                    type="text"
-                    autoComplete="organization"
-                    className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.businessName ? 'border-red-500' : ''}`}
-                    value={form.businessName}
-                    onChange={handleChange}
-                    disabled={state.loading}
-                    placeholder="My Online Store"
-                  />
-                  {errors.businessName && <p className="text-red-400 text-xs mt-1">{errors.businessName}</p>}
-                </div>
+                {/* Business Name (Optional) - Hidden for beta signup */}
+                {!isBetaSignup && (
+                  <div className="relative">
+                    <label htmlFor="businessName" className="block text-sm font-medium text-gray-200 mb-1">Business Name (Optional)</label>
+                    <input
+                      id="businessName"
+                      name="businessName"
+                      type="text"
+                      autoComplete="organization"
+                      className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.businessName ? 'border-red-500' : ''}`}
+                      value={form.businessName}
+                      onChange={handleChange}
+                      disabled={state.loading}
+                      placeholder="My Online Store"
+                    />
+                    {errors.businessName && <p className="text-red-400 text-xs mt-1">{errors.businessName}</p>}
+                  </div>
+                )}
 
                 {/* Password Fields */}
                 <div className="relative">
@@ -541,28 +564,30 @@ export default function SignupPage() {
                   {errors.confirmPassword && <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>}
                 </div>
 
-                {/* How did you hear about us */}
-                <div className="relative">
-                  <label htmlFor="howDidYouHear" className="block text-sm font-medium text-gray-200 mb-1">How did you hear about us?</label>
-                  <select
-                    id="howDidYouHear"
-                    name="howDidYouHear"
-                    className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.howDidYouHear ? 'border-red-500' : ''}`}
-                    value={form.howDidYouHear}
-                    onChange={handleChange}
-                    disabled={state.loading}
-                  >
-                    <option value="">Select an option</option>
-                    <option value="google">Google Search</option>
-                    <option value="social-media">Social Media</option>
-                    <option value="youtube">YouTube</option>
-                    <option value="friend">Friend/Colleague</option>
-                    <option value="forum">Online Forum/Community</option>
-                    <option value="advertisement">Advertisement</option>
-                    <option value="other">Other</option>
-                  </select>
-                  {errors.howDidYouHear && <p className="text-red-400 text-xs mt-1">{errors.howDidYouHear}</p>}
-                </div>
+                {/* How did you hear about us - Hidden for beta signup */}
+                {!isBetaSignup && (
+                  <div className="relative">
+                    <label htmlFor="howDidYouHear" className="block text-sm font-medium text-gray-200 mb-1">How did you hear about us?</label>
+                    <select
+                      id="howDidYouHear"
+                      name="howDidYouHear"
+                      className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.howDidYouHear ? 'border-red-500' : ''}`}
+                      value={form.howDidYouHear}
+                      onChange={handleChange}
+                      disabled={state.loading}
+                    >
+                      <option value="">Select an option</option>
+                      <option value="google">Google Search</option>
+                      <option value="social-media">Social Media</option>
+                      <option value="youtube">YouTube</option>
+                      <option value="friend">Friend/Colleague</option>
+                      <option value="forum">Online Forum/Community</option>
+                      <option value="advertisement">Advertisement</option>
+                      <option value="other">Other</option>
+                    </select>
+                    {errors.howDidYouHear && <p className="text-red-400 text-xs mt-1">{errors.howDidYouHear}</p>}
+                  </div>
+                )}
 
                 {/* Google reCAPTCHA Component */}
                 <ReCAPTCHA
@@ -588,7 +613,7 @@ export default function SignupPage() {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
                     </svg>
                   )}
-                  {state.loading ? 'Signing up...' : 'Sign Up'}
+                  {state.loading ? 'Signing up...' : (isBetaSignup ? 'Create Account & Continue to Payment →' : 'Sign Up')}
                 </button>
 
                 <div className="mt-4 text-xs text-gray-400 text-center">

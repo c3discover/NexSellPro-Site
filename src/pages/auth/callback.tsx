@@ -32,7 +32,7 @@ export default function AuthCallback() {
   const [state, setState] = useState<AuthState>('processing');
   const [error, setError] = useState<string | null>(null);
   const [authType, setAuthType] = useState<AuthType>('unknown');
-  
+
   // Refs for cleanup and timeout management
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const retryCountRef = useRef(0);
@@ -43,13 +43,13 @@ export default function AuthCallback() {
   const parseUrlParams = (): { type: AuthType; hasError: boolean; errorMessage: string | null } => {
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const queryParams = new URLSearchParams(window.location.search);
-    
 
-    
+
+
     // Check for errors first
     const errorParam = hashParams.get('error') || queryParams.get('error');
     const errorDescription = hashParams.get('error_description') || queryParams.get('error_description');
-    
+
     if (errorParam) {
       console.error('[Auth Callback] Error detected:', errorParam, errorDescription);
       return {
@@ -62,7 +62,7 @@ export default function AuthCallback() {
     // Determine auth type
     const type = hashParams.get('type') || queryParams.get('type');
     let authType: AuthType = 'unknown';
-    
+
     if (type === 'signup' || type === 'email') {
       authType = 'signup';
     } else if (type === 'recovery') {
@@ -86,7 +86,7 @@ export default function AuthCallback() {
 
       // If no session, try to refresh to establish one
       const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
-      
+
       if (refreshError) {
         console.error('[Auth Callback] Session refresh error:', refreshError);
         return false;
@@ -98,7 +98,7 @@ export default function AuthCallback() {
 
       // Final attempt: check if session was established via URL processing
       const { data: { session: finalSession } } = await supabase.auth.getSession();
-      
+
       return !!finalSession;
     } catch (error) {
       console.error('[Auth Callback] Session establishment error:', error);
@@ -110,10 +110,10 @@ export default function AuthCallback() {
   const handleSuccess = useCallback(async (type: AuthType) => {
     // Authentication successful for type: ${type}
     setState('confirmed');
-    
+
     // Get the current user session
     const { data: { session } } = await supabase.auth.getSession();
-    
+
     if (session?.user) {
       const userId = session.user.id;
       const userMetadata = session.user.user_metadata;
@@ -134,7 +134,7 @@ export default function AuthCallback() {
           const { error: profileError } = await supabase
             .from("user_profiles")
             .upsert(profileData, { onConflict: 'user_id' });
-          
+
           if (profileError) {
             console.error('[Auth Callback] Failed to upsert user profile:', profileError);
           } else {
@@ -150,7 +150,7 @@ export default function AuthCallback() {
           const { data: existingPlan, error: selectError } = await supabase
             .from("user_plan")
             .select("plan")
-            .eq("user_id", userId)
+            .eq("id", userId)
             .maybeSingle();
 
           if (selectError) {
@@ -160,13 +160,13 @@ export default function AuthCallback() {
           // Only create plan if it doesn't exist, or update if needed
           if (!existingPlan) {
             const planData = {
-              user_id: userId,
+              id: userId,
               plan: userMetadata?.plan || 'free'
             };
 
             const { error: planError } = await supabase
               .from("user_plan")
-              .upsert(planData, { onConflict: 'user_id' });
+              .upsert(planData, { onConflict: 'id' });
 
             if (planError) {
               console.error('[Auth Callback] Failed to upsert user plan:', planError);
@@ -181,7 +181,7 @@ export default function AuthCallback() {
         }
       }
     }
-    
+
     // Redirect based on auth type
     const redirectPath = (() => {
       switch (type) {
@@ -210,7 +210,7 @@ export default function AuthCallback() {
     console.error('[Auth Callback] Authentication failed:', message);
     setError(message);
     setState('error');
-    
+
     // Redirect based on auth type
     setTimeout(async () => {
       const redirectPath = (() => {
@@ -248,11 +248,11 @@ export default function AuthCallback() {
     // If no auth type is detected, this might be a direct visit or failed redirect
     if (type === 'unknown') {
       console.warn('[Auth Callback] No auth type detected, checking for session...');
-      
+
       // Check if user is already authenticated
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-  
+
         handleSuccess('signup');
         return;
       } else {
@@ -274,7 +274,7 @@ export default function AuthCallback() {
     // Retry logic for session establishment with shorter intervals
     const attemptSessionEstablishment = async (): Promise<void> => {
       const hasSession = await establishSession();
-      
+
       if (hasSession) {
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
@@ -285,7 +285,7 @@ export default function AuthCallback() {
       }
 
       retryCountRef.current++;
-      
+
       if (retryCountRef.current < maxRetries) {
 
         // Shorter retry intervals (1 second instead of 2)
@@ -296,7 +296,7 @@ export default function AuthCallback() {
           clearTimeout(timeoutRef.current);
           timeoutRef.current = null;
         }
-        
+
         // Handle based on auth type with more specific messages
         switch (type) {
           case 'signup':
@@ -354,7 +354,7 @@ export default function AuthCallback() {
               </p>
             </>
           )}
-          
+
           {state === 'confirmed' && (
             <>
               <div className="text-4xl mb-4">✅</div>
@@ -365,7 +365,7 @@ export default function AuthCallback() {
               </p>
             </>
           )}
-          
+
           {state === 'error' && (
             <>
               <div className="text-4xl mb-4">⚠️</div>

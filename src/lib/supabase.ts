@@ -71,11 +71,14 @@ export interface UserProfile {
 
 // User Plan interface
 export interface UserPlan {
-  id: string;
-  user_id: string;
-  plan: 'free' | 'premium' | 'enterprise' | 'beta';
+  id: string;  // This IS the user's ID
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  plan: 'free' | 'premium' | 'enterprise' | 'beta' | 'founding';
+  stripe_customer_id?: string;
   created_at: string;
-  updated_at: string;
+  last_updated: string;
 }
 
 // Auth status interface for checkAuthStatus function
@@ -426,7 +429,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
       return await supabase
         .from('user_profiles')
         .select('*')
-        .eq('user_id', userId)
+        .eq('id', userId)
         .single();
     });
 

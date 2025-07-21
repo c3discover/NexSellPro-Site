@@ -52,10 +52,10 @@ const initialForm: SignupForm = {
 export default function SignupPage() {
   const router = useRouter();
   const captchaRef = useRef<ReCAPTCHA>(null);
-  
+
   // Log the reCAPTCHA site key for debugging
 
-  
+
   const [form, setForm] = useState<SignupForm>(initialForm);
   const [errors, setErrors] = useState<FormError>({});
   const [state, setState] = useState<SignupState>({
@@ -71,7 +71,7 @@ export default function SignupPage() {
   // Handle automatic redirect to login after successful signup
   useEffect(() => {
     let countdownInterval: NodeJS.Timeout;
-    
+
     if (state.success && state.redirectCountdown > 0) {
       countdownInterval = setInterval(() => {
         setState(prev => ({
@@ -99,7 +99,7 @@ export default function SignupPage() {
   // Google reCAPTCHA callbacks
   const handleCaptchaVerify = (token: string | null) => {
     if (token) {
-  
+
       setState(prev => ({ ...prev, captchaToken: token }));
       setErrors(prev => ({ ...prev, captcha: undefined }));
     } else {
@@ -130,14 +130,14 @@ export default function SignupPage() {
     if (!values.lastName?.trim()) {
       errs.lastName = 'Last name is required.'; // Required for account identification and support
     }
-    
+
     // Email validation with comprehensive checks
     if (!values.email) {
       errs.email = 'Email is required.'; // Required for account creation and communication
     } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(values.email)) {
       errs.email = 'Enter a valid email address.'; // Basic email format validation
     }
-    
+
     // Password strength validation
     if (!values.password) {
       errs.password = 'Password is required.'; // Required for account security
@@ -146,7 +146,7 @@ export default function SignupPage() {
     } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(values.password)) {
       errs.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number.'; // Complexity requirement for security
     }
-    
+
     // Password confirmation validation
     if (!values.confirmPassword) {
       errs.confirmPassword = 'Please confirm your password.'; // Prevents typos in password
@@ -162,7 +162,7 @@ export default function SignupPage() {
     e.preventDefault();
     setErrors({});
     setState(prev => ({ ...prev, resent: false }));
-    
+
     // Validate form before submission
     const validation = validate(form);
     if (Object.keys(validation).length > 0) {
@@ -175,9 +175,9 @@ export default function SignupPage() {
       setErrors({ captcha: 'Please complete the security check.' });
       return;
     }
-    
+
     setState(prev => ({ ...prev, loading: true }));
-    
+
     try {
       // Step 1: Attempt to create user account with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
@@ -198,8 +198,8 @@ export default function SignupPage() {
       if (error) {
         // Handle specific error cases
         if (error.message.includes('already registered') || error.message.includes('already exists')) {
-          setErrors({ 
-            email: 'An account with this email already exists. Please sign in instead.' 
+          setErrors({
+            email: 'An account with this email already exists. Please sign in instead.'
           });
         } else {
           setErrors({ general: error.message || 'Signup failed. Please try again.' });
@@ -228,14 +228,14 @@ export default function SignupPage() {
             console.error('Error inserting user profile:', profileError);
             // Don't fail the signup if profile save fails - user can update later
           } else {
-    
+
           }
 
           // Insert user into user_plan table
           const { error: planError } = await supabase
             .from("user_plan")
             .upsert({
-              user_id: data.user.id,
+              id: data.user.id,  // ✅ Correct field name!
               plan: "free"
             });
 
@@ -243,7 +243,6 @@ export default function SignupPage() {
             console.error('Error inserting user plan:', planError);
             // Don't fail the signup if plan assignment fails - user can be updated later
           } else {
-    
           }
         } catch (error) {
           console.error('Error saving user data:', error);
@@ -252,14 +251,14 @@ export default function SignupPage() {
       }
 
       // Step 3: Show success state
-      setState(prev => ({ 
-        ...prev, 
-        success: true, 
+      setState(prev => ({
+        ...prev,
+        success: true,
         loading: false,
         redirectCountdown: 30,
         captchaToken: '' // Clear captcha token after successful signup
       }));
-      
+
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Unexpected error. Please try again.';
       setErrors({ general: errorMessage });
@@ -271,7 +270,7 @@ export default function SignupPage() {
   async function handleResend() {
     setState(prev => ({ ...prev, resent: false, loading: true }));
     setErrors({});
-    
+
     try {
       const { error } = await supabase.auth.signUp({
         email: form.email,
@@ -286,11 +285,11 @@ export default function SignupPage() {
           }
         },
       });
-      
+
       if (error) {
         if (error.message.includes('already registered') || error.message.includes('already exists')) {
-          setErrors({ 
-            email: 'An account with this email already exists. Please sign in instead.' 
+          setErrors({
+            email: 'An account with this email already exists. Please sign in instead.'
           });
         } else {
           setErrors({ general: error.message || 'Could not resend confirmation email.' });
@@ -315,17 +314,17 @@ export default function SignupPage() {
         <div className="card max-w-lg w-full mx-auto p-8 md:p-10 glass animate-fadeIn shadow-xl">
           <h1 className="text-3xl font-bold text-center mb-2 gradient-text">Create your NexSellPro account</h1>
           <p className="text-center text-gray-400 mb-6">Join thousands of sellers finding profitable products on Walmart Marketplace</p>
-          
+
           {state.success ? (
             <div className="text-center">
               <div className="text-2xl mb-4 text-accent">Check your email, {form.firstName}!</div>
-              
+
               {/* Enhanced success message with detailed instructions */}
               <div className="bg-slate-800/50 rounded-lg p-4 mb-4 text-left">
                 <p className="text-gray-300 mb-3">
                   We&rsquo;ve sent a confirmation link to <span className="font-semibold text-white">{form.email}</span>.
                 </p>
-                
+
                 <div className="space-y-2 text-sm text-gray-400">
                   <div className="flex items-start gap-2">
                     <span className="text-accent mt-0.5">•</span>
@@ -368,18 +367,18 @@ export default function SignupPage() {
                 >
                   {state.loading ? 'Resending...' : 'Resend Email'}
                 </button>
-                
+
                 <button
                   className="btn-accent w-full"
-                  onClick={() => { 
-                    setState(prev => ({ ...prev, success: false })); 
-                    setForm(initialForm); 
+                  onClick={() => {
+                    setState(prev => ({ ...prev, success: false }));
+                    setForm(initialForm);
                   }}
                   type="button"
                 >
                   Start Over
                 </button>
-                
+
                 <button
                   className="btn-secondary w-full"
                   onClick={() => router.push('/login')}
@@ -573,11 +572,11 @@ export default function SignupPage() {
                   onExpired={handleCaptchaExpire}
                   onError={handleCaptchaError}
                 />
-                
+
                 {/* Error messages */}
                 {errors.captcha && <div className="text-red-400 text-sm text-center">{errors.captcha}</div>}
                 {errors.general && <div className="text-red-500 text-sm text-center">{errors.general}</div>}
-                
+
                 <button
                   type="submit"
                   className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -591,12 +590,12 @@ export default function SignupPage() {
                   )}
                   {state.loading ? 'Signing up...' : 'Sign Up'}
                 </button>
-                
+
                 <div className="mt-4 text-xs text-gray-400 text-center">
                   By signing up, you agree to our{' '}
                   <Link href="/terms" className="text-accent hover:underline hover-underline">Terms of Service</Link>.
                 </div>
-                
+
                 <div className="mt-6 text-center text-gray-400 text-sm">
                   Already have an account?{' '}
                   <Link href="/login" className="text-accent hover:underline hover-underline">Sign in</Link>

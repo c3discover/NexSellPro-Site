@@ -432,51 +432,7 @@ export default function SignupPage() {
         return;
       }
 
-      // Step 2: Store user profile data if signup was successful
-      if (data.user) {
-        try {
-          // Insert user profile into user_profiles table
-          const profileData = {
-            user_id: data.user.id,
-            first_name: form.firstName,
-            last_name: form.lastName,
-            ...(form.businessName && { business_name: form.businessName }),
-            ...(form.howDidYouHear && { how_did_you_hear: form.howDidYouHear })
-          };
-
-          const { error: profileError } = await supabase
-            .from("user_profiles")
-            .upsert(profileData);
-
-          if (profileError) {
-            console.error('Error inserting user profile:', profileError);
-            alert(`Profile error: ${profileError.message}`); // Temporary for debugging
-            // Don't fail the signup if profile save fails - user can update later
-          } else {
-
-          }
-
-          // Insert user into user_plan table
-          const { error: planError } = await supabase
-            .from("user_plan")
-            .upsert({
-              id: data.user.id,  // ✅ Correct field name!
-              plan: "free"
-            });
-
-          if (planError) {
-            console.error('Error inserting user plan:', planError);
-            alert(`Plan error: ${planError.message}`); // Temporary for debugging
-            // Don't fail the signup if plan assignment fails - user can be updated later
-          } else {
-          }
-        } catch (error) {
-          console.error('Error saving user data:', error);
-          // Don't fail the signup if data save fails - user can update later
-        }
-      }
-
-      // Step 3: Handle success based on signup type
+      // Step 2: Handle success based on signup type
       if (isBetaSignup && data.user) {
         // For beta signup, redirect to Stripe immediately
         const redirectUrl = `${stripeLink}?client_reference_id=${data.user.id}&prefilled_email=${encodeURIComponent(data.user.email || '')}`;

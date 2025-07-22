@@ -546,7 +546,7 @@ export async function getUserPlan(userId: string): Promise<UserPlan | null> {
       return await supabase
         .from('user_plan')
         .select('*')
-        .eq('user_id', userId)
+        .eq('id', userId)
         .single();
     });
 

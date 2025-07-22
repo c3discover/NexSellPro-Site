@@ -51,24 +51,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
   
+    // Enhanced debugging
+    console.log('=== STRIPE WEBHOOK DEBUG ===');
+    console.log('1. Webhook triggered at:', new Date().toISOString());
+    console.log('2. Session ID:', session.id);
+    console.log('3. Client Reference ID received:', session.client_reference_id);
+    console.log('4. Customer email:', session.customer_details?.email);
+    console.log('5. Customer name:', session.customer_details?.name);
+    
     const userId = session.client_reference_id;
     if (!userId) {
-      console.error('No client_reference_id in Stripe session');
+      console.error('ERROR: No client_reference_id in Stripe session');
+      console.log('Full session object:', JSON.stringify(session, null, 2));
       return res.status(400).json({ error: 'Missing user reference' });
     }
 
+    // Verify the user exists in our database before updating
+    console.log('6. Checking if user exists in database...');
+    const { data: existingUser, error: lookupError } = await supabase
+      .from('user_plan')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    console.log('7. Database lookup result:');
+    console.log('   - Found user:', existingUser ? 'YES' : 'NO');
+    console.log('   - User data:', existingUser);
+    console.log('   - Lookup error:', lookupError);
+    
     const email = session.customer_details?.email
     const fullName = session.customer_details?.name || ''
     const [first_name, last_name] = fullName.split(' ')
     const stripe_customer_id = session.customer as string
 
-    console.log('Stripe webhook received for user:', userId);
-    console.log('Email:', email);
-    console.log('Customer ID:', stripe_customer_id);
-  
+    console.log('8. Preparing to update user plan...');
+    console.log('==============================');
+    
     if (!email) return res.status(400).json({ error: 'Missing customer email' })
-  
-    // Update the user's plan directly using the ID from Stripe
+    
+    // Continue with the rest of your webhook code...
     const { error: planError } = await supabase
       .from('user_plan')
       .update({

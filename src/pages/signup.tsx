@@ -11,7 +11,7 @@ function BetaSignupHeader() {
     <>
       <h1 className="text-3xl font-bold mb-3 text-white">Almost There! Create Your Account</h1>
       <p className="text-gray-400 mb-8">Just 30 seconds to unlock your Founding Member access</p>
-      
+
       {/* Progress indicator */}
       <div className="max-w-md mx-auto mb-8">
         <div className="flex items-center justify-between">
@@ -80,7 +80,7 @@ function SubmitButton({ loading, isBetaSignup }: { loading: boolean; isBetaSignu
   return (
     <button
       type="submit"
-      className={isBetaSignup 
+      className={isBetaSignup
         ? "w-full bg-blue-600 text-white py-4 px-6 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         : "btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
       }
@@ -98,17 +98,17 @@ function SubmitButton({ loading, isBetaSignup }: { loading: boolean; isBetaSignu
 }
 
 // Success message component
-function SuccessMessage({ 
-  isBetaSignup, 
-  form, 
-  state, 
-  errors, 
-  handleResend, 
-  setState, 
-  setForm, 
-  initialForm, 
-  router 
-}: { 
+function SuccessMessage({
+  isBetaSignup,
+  form,
+  state,
+  errors,
+  handleResend,
+  setState,
+  setForm,
+  initialForm,
+  router
+}: {
   isBetaSignup: boolean;
   form: SignupForm;
   state: SignupState;
@@ -434,9 +434,29 @@ export default function SignupPage() {
 
       // Step 2: Handle success based on signup type
       if (isBetaSignup && data.user) {
-        // For beta signup, redirect to Stripe immediately
-        console.log('Redirecting to Stripe with user ID:', data.user.id);
-        const redirectUrl = `${stripeLink}?client_reference_id=${data.user.id}&prefilled_email=${encodeURIComponent(data.user.email || '')}`;
+        // Enhanced debugging with delay to ensure database trigger completes
+        console.log('=== BETA SIGNUP FLOW DEBUG ===');
+        console.log('1. User successfully created');
+        console.log('   - User ID:', data.user.id);
+        console.log('   - User email:', data.user.email);
+        console.log('   - Current time:', new Date().toISOString());
+        
+        // IMPORTANT: Wait 1.5 seconds for database trigger to complete
+        console.log('2. Waiting for database trigger to create records...');
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Build the Stripe redirect URL
+        const clientReferenceId = data.user.id;
+        const userEmail = data.user.email || '';
+        const redirectUrl = `${stripeLink}?client_reference_id=${clientReferenceId}&prefilled_email=${encodeURIComponent(userEmail)}`;
+        
+        console.log('3. Stripe redirect details:');
+        console.log('   - Client Reference ID:', clientReferenceId);
+        console.log('   - Stripe Link Base:', stripeLink);
+        console.log('   - Full Redirect URL:', redirectUrl);
+        console.log('==============================');
+        
+        // Redirect to Stripe
         window.location.href = redirectUrl;
       } else {
         // For regular signup, show success state
@@ -515,7 +535,7 @@ export default function SignupPage() {
               {isBetaSignup ? <BetaSignupHeader /> : <FreeSignupHeader />}
 
               {state.success ? (
-                <SuccessMessage 
+                <SuccessMessage
                   isBetaSignup={isBetaSignup}
                   form={form}
                   state={state}
@@ -530,200 +550,200 @@ export default function SignupPage() {
                 <>
 
                   <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Name Fields */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="relative">
-                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-200 mb-1">First Name *</label>
-                    <input
-                      id="firstName"
-                      name="firstName"
-                      type="text"
-                      autoComplete="given-name"
-                      className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.firstName ? 'border-red-500' : ''}`}
-                      value={form.firstName}
-                      onChange={handleChange}
-                      disabled={state.loading}
-                      required
-                      placeholder="John"
+                    {/* Name Fields */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="relative">
+                        <label htmlFor="firstName" className="block text-sm font-medium text-gray-200 mb-1">First Name *</label>
+                        <input
+                          id="firstName"
+                          name="firstName"
+                          type="text"
+                          autoComplete="given-name"
+                          className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.firstName ? 'border-red-500' : ''}`}
+                          value={form.firstName}
+                          onChange={handleChange}
+                          disabled={state.loading}
+                          required
+                          placeholder="John"
+                        />
+                        {errors.firstName && <p className="text-red-400 text-xs mt-1">{errors.firstName}</p>}
+                      </div>
+                      <div className="relative">
+                        <label htmlFor="lastName" className="block text-sm font-medium text-gray-200 mb-1">Last Name *</label>
+                        <input
+                          id="lastName"
+                          name="lastName"
+                          type="text"
+                          autoComplete="family-name"
+                          className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.lastName ? 'border-red-500' : ''}`}
+                          value={form.lastName}
+                          onChange={handleChange}
+                          disabled={state.loading}
+                          required
+                          placeholder="Doe"
+                        />
+                        {errors.lastName && <p className="text-red-400 text-xs mt-1">{errors.lastName}</p>}
+                      </div>
+                    </div>
+
+                    {/* Email Field */}
+                    <div className="relative">
+                      <label htmlFor="email" className="block text-sm font-medium text-gray-200 mb-1">Email *</label>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        autoComplete="email"
+                        className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.email ? 'border-red-500' : ''}`}
+                        value={form.email}
+                        onChange={handleChange}
+                        disabled={state.loading}
+                        required
+                        placeholder="john@example.com"
+                      />
+                      {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
+                    </div>
+
+                    {/* Business Name (Optional) */}
+                    <div className="relative">
+                      <label htmlFor="businessName" className="block text-sm font-medium text-gray-200 mb-1">Business Name (Optional)</label>
+                      <input
+                        id="businessName"
+                        name="businessName"
+                        type="text"
+                        autoComplete="organization"
+                        className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.businessName ? 'border-red-500' : ''}`}
+                        value={form.businessName}
+                        onChange={handleChange}
+                        disabled={state.loading}
+                        placeholder="My Online Store"
+                      />
+                      {errors.businessName && <p className="text-red-400 text-xs mt-1">{errors.businessName}</p>}
+                    </div>
+
+                    {/* Password Fields */}
+                    <div className="relative">
+                      <label htmlFor="password" className="block text-sm font-medium text-gray-200 mb-1">Password *</label>
+                      <div className="relative">
+                        <input
+                          id="password"
+                          name="password"
+                          type={state.showPassword ? "text" : "password"}
+                          autoComplete="new-password"
+                          className={`w-full px-4 py-3 pr-12 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.password ? 'border-red-500' : ''}`}
+                          value={form.password}
+                          onChange={handleChange}
+                          disabled={state.loading}
+                          required
+                          placeholder="Create a strong password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setState(prev => ({ ...prev, showPassword: !prev.showPassword }))}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors z-20"
+                          disabled={state.loading}
+                        >
+                          {state.showPassword ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                      {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
+                    </div>
+
+                    <div className="relative">
+                      <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-200 mb-1">Confirm Password *</label>
+                      <div className="relative">
+                        <input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type={state.showConfirmPassword ? "text" : "password"}
+                          autoComplete="new-password"
+                          className={`w-full px-4 py-3 pr-12 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                          value={form.confirmPassword}
+                          onChange={handleChange}
+                          disabled={state.loading}
+                          required
+                          placeholder="Confirm your password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setState(prev => ({ ...prev, showConfirmPassword: !prev.showConfirmPassword }))}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors z-20"
+                          disabled={state.loading}
+                        >
+                          {state.showConfirmPassword ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                      {errors.confirmPassword && <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>}
+                    </div>
+
+                    {/* How did you hear about us */}
+                    <div className="relative">
+                      <label htmlFor="howDidYouHear" className="block text-sm font-medium text-gray-200 mb-1">How did you hear about us?</label>
+                      <select
+                        id="howDidYouHear"
+                        name="howDidYouHear"
+                        className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.howDidYouHear ? 'border-red-500' : ''}`}
+                        value={form.howDidYouHear}
+                        onChange={handleChange}
+                        disabled={state.loading}
+                      >
+                        <option value="">Select an option</option>
+                        <option value="google">Google Search</option>
+                        <option value="social-media">Social Media</option>
+                        <option value="youtube">YouTube</option>
+                        <option value="friend">Friend/Colleague</option>
+                        <option value="forum">Online Forum/Community</option>
+                        <option value="advertisement">Advertisement</option>
+                        <option value="other">Other</option>
+                      </select>
+                      {errors.howDidYouHear && <p className="text-red-400 text-xs mt-1">{errors.howDidYouHear}</p>}
+                    </div>
+
+                    {/* Google reCAPTCHA Component */}
+                    <ReCAPTCHA
+                      ref={captchaRef}
+                      sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                      onChange={handleCaptchaVerify}
+                      onExpired={handleCaptchaExpire}
+                      onError={handleCaptchaError}
                     />
-                    {errors.firstName && <p className="text-red-400 text-xs mt-1">{errors.firstName}</p>}
-                  </div>
-                  <div className="relative">
-                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-200 mb-1">Last Name *</label>
-                    <input
-                      id="lastName"
-                      name="lastName"
-                      type="text"
-                      autoComplete="family-name"
-                      className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.lastName ? 'border-red-500' : ''}`}
-                      value={form.lastName}
-                      onChange={handleChange}
-                      disabled={state.loading}
-                      required
-                      placeholder="Doe"
-                    />
-                    {errors.lastName && <p className="text-red-400 text-xs mt-1">{errors.lastName}</p>}
-                  </div>
-                </div>
 
-                {/* Email Field */}
-                <div className="relative">
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-200 mb-1">Email *</label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.email ? 'border-red-500' : ''}`}
-                    value={form.email}
-                    onChange={handleChange}
-                    disabled={state.loading}
-                    required
-                    placeholder="john@example.com"
-                  />
-                  {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
-                </div>
+                    {/* Error messages */}
+                    {errors.captcha && <div className="text-red-400 text-sm text-center">{errors.captcha}</div>}
+                    {errors.general && <div className="text-red-500 text-sm text-center">{errors.general}</div>}
 
-                {/* Business Name (Optional) */}
-                <div className="relative">
-                  <label htmlFor="businessName" className="block text-sm font-medium text-gray-200 mb-1">Business Name (Optional)</label>
-                  <input
-                    id="businessName"
-                    name="businessName"
-                    type="text"
-                    autoComplete="organization"
-                    className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.businessName ? 'border-red-500' : ''}`}
-                    value={form.businessName}
-                    onChange={handleChange}
-                    disabled={state.loading}
-                    placeholder="My Online Store"
-                  />
-                  {errors.businessName && <p className="text-red-400 text-xs mt-1">{errors.businessName}</p>}
-                </div>
+                    <SubmitButton loading={state.loading} isBetaSignup={isBetaSignup} />
 
-                {/* Password Fields */}
-                <div className="relative">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-200 mb-1">Password *</label>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      name="password"
-                      type={state.showPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      className={`w-full px-4 py-3 pr-12 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.password ? 'border-red-500' : ''}`}
-                      value={form.password}
-                      onChange={handleChange}
-                      disabled={state.loading}
-                      required
-                      placeholder="Create a strong password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setState(prev => ({ ...prev, showPassword: !prev.showPassword }))}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors z-20"
-                      disabled={state.loading}
-                    >
-                      {state.showPassword ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                        </svg>
-                      ) : (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                  {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
-                </div>
+                    <div className="mt-4 text-xs text-gray-400 text-center">
+                      By signing up, you agree to our{' '}
+                      <Link href="/terms" className="text-accent hover:underline hover-underline">Terms of Service</Link>.
+                    </div>
 
-                <div className="relative">
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-200 mb-1">Confirm Password *</label>
-                  <div className="relative">
-                    <input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type={state.showConfirmPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      className={`w-full px-4 py-3 pr-12 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
-                      value={form.confirmPassword}
-                      onChange={handleChange}
-                      disabled={state.loading}
-                      required
-                      placeholder="Confirm your password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setState(prev => ({ ...prev, showConfirmPassword: !prev.showConfirmPassword }))}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors z-20"
-                      disabled={state.loading}
-                    >
-                      {state.showConfirmPassword ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                        </svg>
-                      ) : (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                  {errors.confirmPassword && <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>}
-                </div>
-
-                {/* How did you hear about us */}
-                <div className="relative">
-                  <label htmlFor="howDidYouHear" className="block text-sm font-medium text-gray-200 mb-1">How did you hear about us?</label>
-                  <select
-                    id="howDidYouHear"
-                    name="howDidYouHear"
-                    className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.howDidYouHear ? 'border-red-500' : ''}`}
-                    value={form.howDidYouHear}
-                    onChange={handleChange}
-                    disabled={state.loading}
-                  >
-                    <option value="">Select an option</option>
-                    <option value="google">Google Search</option>
-                    <option value="social-media">Social Media</option>
-                    <option value="youtube">YouTube</option>
-                    <option value="friend">Friend/Colleague</option>
-                    <option value="forum">Online Forum/Community</option>
-                    <option value="advertisement">Advertisement</option>
-                    <option value="other">Other</option>
-                  </select>
-                  {errors.howDidYouHear && <p className="text-red-400 text-xs mt-1">{errors.howDidYouHear}</p>}
-                </div>
-
-                {/* Google reCAPTCHA Component */}
-                <ReCAPTCHA
-                  ref={captchaRef}
-                  sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-                  onChange={handleCaptchaVerify}
-                  onExpired={handleCaptchaExpire}
-                  onError={handleCaptchaError}
-                />
-
-                {/* Error messages */}
-                {errors.captcha && <div className="text-red-400 text-sm text-center">{errors.captcha}</div>}
-                {errors.general && <div className="text-red-500 text-sm text-center">{errors.general}</div>}
-
-                <SubmitButton loading={state.loading} isBetaSignup={isBetaSignup} />
-
-                <div className="mt-4 text-xs text-gray-400 text-center">
-                  By signing up, you agree to our{' '}
-                  <Link href="/terms" className="text-accent hover:underline hover-underline">Terms of Service</Link>.
-                </div>
-
-                <div className="mt-6 text-center text-gray-400 text-sm">
-                  Already have an account?{' '}
-                  <Link href="/login" className="text-accent hover:underline hover-underline">Sign in</Link>
-                </div>
-              </form>
-            </>
-          )}
+                    <div className="mt-6 text-center text-gray-400 text-sm">
+                      Already have an account?{' '}
+                      <Link href="/login" className="text-accent hover:underline hover-underline">Sign in</Link>
+                    </div>
+                  </form>
+                </>
+              )}
             </>
           )}
         </div>

@@ -61,6 +61,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const fullName = session.customer_details?.name || ''
     const [first_name, last_name] = fullName.split(' ')
     const stripe_customer_id = session.customer as string
+
+    console.log('Stripe webhook received for user:', userId);
+    console.log('Email:', email);
+    console.log('Customer ID:', stripe_customer_id);
   
     if (!email) return res.status(400).json({ error: 'Missing customer email' })
   
@@ -76,6 +80,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         last_updated: new Date().toISOString()
       })
       .eq('id', userId);
+
+    console.log('Plan update result:', { error: planError });
   
     if (planError) {
       // If update fails, the user might not have a plan record yet
@@ -92,6 +98,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           created_at: new Date().toISOString(),
           last_updated: new Date().toISOString()
         })
+
+      console.log('Plan insert result:', { error: insertError });
   
       if (insertError) {
         console.error('Failed to create user plan:', insertError)

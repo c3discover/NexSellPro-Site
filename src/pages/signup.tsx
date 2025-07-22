@@ -435,6 +435,7 @@ export default function SignupPage() {
       // Step 2: Handle success based on signup type
       if (isBetaSignup && data.user) {
         // For beta signup, redirect to Stripe immediately
+        console.log('Redirecting to Stripe with user ID:', data.user.id);
         const redirectUrl = `${stripeLink}?client_reference_id=${data.user.id}&prefilled_email=${encodeURIComponent(data.user.email || '')}`;
         window.location.href = redirectUrl;
       } else {
@@ -583,24 +584,22 @@ export default function SignupPage() {
                   {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
                 </div>
 
-                {/* Business Name (Optional) - Hidden for beta signup */}
-                {!isBetaSignup && (
-                  <div className="relative">
-                    <label htmlFor="businessName" className="block text-sm font-medium text-gray-200 mb-1">Business Name (Optional)</label>
-                    <input
-                      id="businessName"
-                      name="businessName"
-                      type="text"
-                      autoComplete="organization"
-                      className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.businessName ? 'border-red-500' : ''}`}
-                      value={form.businessName}
-                      onChange={handleChange}
-                      disabled={state.loading}
-                      placeholder="My Online Store"
-                    />
-                    {errors.businessName && <p className="text-red-400 text-xs mt-1">{errors.businessName}</p>}
-                  </div>
-                )}
+                {/* Business Name (Optional) */}
+                <div className="relative">
+                  <label htmlFor="businessName" className="block text-sm font-medium text-gray-200 mb-1">Business Name (Optional)</label>
+                  <input
+                    id="businessName"
+                    name="businessName"
+                    type="text"
+                    autoComplete="organization"
+                    className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.businessName ? 'border-red-500' : ''}`}
+                    value={form.businessName}
+                    onChange={handleChange}
+                    disabled={state.loading}
+                    placeholder="My Online Store"
+                  />
+                  {errors.businessName && <p className="text-red-400 text-xs mt-1">{errors.businessName}</p>}
+                </div>
 
                 {/* Password Fields */}
                 <div className="relative">
@@ -675,30 +674,28 @@ export default function SignupPage() {
                   {errors.confirmPassword && <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>}
                 </div>
 
-                {/* How did you hear about us - Hidden for beta signup */}
-                {!isBetaSignup && (
-                  <div className="relative">
-                    <label htmlFor="howDidYouHear" className="block text-sm font-medium text-gray-200 mb-1">How did you hear about us?</label>
-                    <select
-                      id="howDidYouHear"
-                      name="howDidYouHear"
-                      className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.howDidYouHear ? 'border-red-500' : ''}`}
-                      value={form.howDidYouHear}
-                      onChange={handleChange}
-                      disabled={state.loading}
-                    >
-                      <option value="">Select an option</option>
-                      <option value="google">Google Search</option>
-                      <option value="social-media">Social Media</option>
-                      <option value="youtube">YouTube</option>
-                      <option value="friend">Friend/Colleague</option>
-                      <option value="forum">Online Forum/Community</option>
-                      <option value="advertisement">Advertisement</option>
-                      <option value="other">Other</option>
-                    </select>
-                    {errors.howDidYouHear && <p className="text-red-400 text-xs mt-1">{errors.howDidYouHear}</p>}
-                  </div>
-                )}
+                {/* How did you hear about us */}
+                <div className="relative">
+                  <label htmlFor="howDidYouHear" className="block text-sm font-medium text-gray-200 mb-1">How did you hear about us?</label>
+                  <select
+                    id="howDidYouHear"
+                    name="howDidYouHear"
+                    className={`w-full px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition relative z-10 ${errors.howDidYouHear ? 'border-red-500' : ''}`}
+                    value={form.howDidYouHear}
+                    onChange={handleChange}
+                    disabled={state.loading}
+                  >
+                    <option value="">Select an option</option>
+                    <option value="google">Google Search</option>
+                    <option value="social-media">Social Media</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="friend">Friend/Colleague</option>
+                    <option value="forum">Online Forum/Community</option>
+                    <option value="advertisement">Advertisement</option>
+                    <option value="other">Other</option>
+                  </select>
+                  {errors.howDidYouHear && <p className="text-red-400 text-xs mt-1">{errors.howDidYouHear}</p>}
+                </div>
 
                 {/* Google reCAPTCHA Component */}
                 <ReCAPTCHA

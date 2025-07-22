@@ -51,6 +51,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
   
+    const userId = session.client_reference_id;
+    if (!userId) {
+      console.error('No client_reference_id in Stripe session');
+      return res.status(400).json({ error: 'Missing user reference' });
+    }
+
     const email = session.customer_details?.email
     const fullName = session.customer_details?.name || ''
     const [first_name, last_name] = fullName.split(' ')
@@ -58,33 +64,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   
     if (!email) return res.status(400).json({ error: 'Missing customer email' })
   
-    // First, find the user by email in the auth.users table
-    const { data: userData, error: userError } = await supabase.auth.admin.listUsers()
-    
-    if (userError) {
-      console.error('Failed to list users:', userError)
-      return res.status(500).json({ error: 'Failed to find user' })
-    }
-  
-    // Find the user with matching email
-    const user = userData.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
-    
-    if (!user) {
-      console.error('No user found with email:', email)
-      return res.status(404).json({ error: 'User not found' })
-    }
-  
-    // Update the user's plan (not insert a new record!)
+    // Update the user's plan directly using the ID from Stripe
     const { error: planError } = await supabase
       .from('user_plan')
       .update({
         plan: 'founding',
         stripe_customer_id,
+        email: email.toLowerCase(),
         first_name,
         last_name,
         last_updated: new Date().toISOString()
       })
-      .eq('id', user.id)  // Use the actual user's ID!
+      .eq('id', userId);
   
     if (planError) {
       // If update fails, the user might not have a plan record yet
@@ -92,7 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { error: insertError } = await supabase
         .from('user_plan')
         .insert({
-          id: user.id,  // Use the actual user's ID!
+          id: userId,  // Use the ID from Stripe!
           email: email.toLowerCase(),
           first_name,
           last_name,

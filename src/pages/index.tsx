@@ -135,13 +135,13 @@ function HeroSection({ stripeLink }: { stripeLink: string }) {
           >
             Get Started - Free
           </Link>
-          {/* Redirects to environment-specific Stripe Checkout */}
-          <a 
-            href={stripeLink}
+          {/* Redirects to signup page with founding member plan */}
+          <Link 
+            href="/signup?plan=founding"
             className="inline-block bg-green-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-green-700 transition-colors shadow-lg"
           >
             Get Founding Member Access - $29
-          </a>
+          </Link>
         </div>
         {/* Trust indicator and login banner */}
         <p className="mt-4 text-sm text-gray-500 mb-4">

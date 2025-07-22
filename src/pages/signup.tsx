@@ -5,6 +5,211 @@ import { useRouter } from 'next/router';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { supabase } from '@/lib/supabase';
 
+// Beta signup header with progress indicator and benefits
+function BetaSignupHeader() {
+  return (
+    <>
+      <h1 className="text-3xl font-bold mb-3 text-white">Almost There! Create Your Account</h1>
+      <p className="text-gray-400 mb-8">Just 30 seconds to unlock your Founding Member access</p>
+      
+      {/* Progress indicator */}
+      <div className="max-w-md mx-auto mb-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">1</div>
+            <span className="ml-2 font-medium text-white">Create Account</span>
+          </div>
+          <div className="flex-1 h-0.5 bg-gray-600 mx-3"></div>
+          <div className="flex items-center">
+            <div className="bg-gray-600 text-gray-400 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">2</div>
+            <span className="ml-2 text-gray-400">Secure Payment</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Info box */}
+      <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4 mb-6">
+        <div className="flex items-start">
+          <svg className="w-5 h-5 text-blue-400 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+          </svg>
+          <div className="text-sm">
+            <p className="font-medium text-blue-400 mb-1">Why create an account first?</p>
+            <p className="text-gray-300">This ensures your payment is securely linked to your account for instant access, updates, and priority support.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Benefit reminders */}
+      <div className="space-y-2 mb-6 text-sm">
+        <div className="flex items-center text-gray-300">
+          <svg className="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Secure your $29 lifetime Founding Member price</span>
+        </div>
+        <div className="flex items-center text-gray-300">
+          <svg className="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Instant access after payment</span>
+        </div>
+        <div className="flex items-center text-gray-300">
+          <svg className="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>30-day money-back guarantee</span>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Free signup header
+function FreeSignupHeader() {
+  return (
+    <>
+      <h1 className="text-3xl font-bold mb-3 text-white">Create Your NexSellPro Account</h1>
+      <p className="text-gray-400 mb-8">Start analyzing Walmart products instantly</p>
+    </>
+  );
+}
+
+// Submit button component
+function SubmitButton({ loading, isBetaSignup }: { loading: boolean; isBetaSignup: boolean }) {
+  return (
+    <button
+      type="submit"
+      className={isBetaSignup 
+        ? "w-full bg-blue-600 text-white py-4 px-6 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+        : "btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+      }
+      disabled={loading}
+    >
+      {loading && (
+        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+        </svg>
+      )}
+      {loading ? 'Creating account...' : (isBetaSignup ? 'Create Account & Continue to Payment →' : 'Create Free Account')}
+    </button>
+  );
+}
+
+// Success message component
+function SuccessMessage({ 
+  isBetaSignup, 
+  form, 
+  state, 
+  errors, 
+  handleResend, 
+  setState, 
+  setForm, 
+  initialForm, 
+  router 
+}: { 
+  isBetaSignup: boolean;
+  form: SignupForm;
+  state: SignupState;
+  errors: FormError;
+  handleResend: () => void;
+  setState: React.Dispatch<React.SetStateAction<SignupState>>;
+  setForm: React.Dispatch<React.SetStateAction<SignupForm>>;
+  initialForm: SignupForm;
+  router: any;
+}) {
+  if (isBetaSignup) {
+    return (
+      <div className="text-center">
+        <div className="text-green-400 text-6xl mb-4">✓</div>
+        <h2 className="text-2xl font-bold mb-2 text-white">Account Created!</h2>
+        <p className="text-gray-400 mb-6">Redirecting to secure checkout...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-center">
+      <div className="text-2xl mb-4 text-accent">Check your email, {form.firstName}!</div>
+
+      {/* Enhanced success message with detailed instructions */}
+      <div className="bg-slate-800/50 rounded-lg p-4 mb-4 text-left">
+        <p className="text-gray-300 mb-3">
+          We&rsquo;ve sent a confirmation link to <span className="font-semibold text-white">{form.email}</span>.
+        </p>
+
+        <div className="space-y-2 text-sm text-gray-400">
+          <div className="flex items-start gap-2">
+            <span className="text-accent mt-0.5">•</span>
+            <span>Click the link in your email to activate your account</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-accent mt-0.5">•</span>
+            <span>Check your spam/junk folder if you don&rsquo;t see it</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-accent mt-0.5">•</span>
+            <span>The link expires in 1 hour for security</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-accent mt-0.5">•</span>
+            <span>You&rsquo;ll be redirected to login in {state.redirectCountdown} seconds</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Feedback messages */}
+      {state.resent && (
+        <div className="text-green-400 text-sm mb-3 bg-green-400/10 rounded-lg p-2">
+          ✓ Confirmation email resent successfully!
+        </div>
+      )}
+      {errors.general && (
+        <div className="text-red-400 text-sm mb-3 bg-red-400/10 rounded-lg p-2">
+          {errors.general}
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="space-y-2">
+        <button
+          className="btn-primary w-full"
+          onClick={handleResend}
+          disabled={state.loading}
+          type="button"
+        >
+          {state.loading ? 'Resending...' : 'Resend Email'}
+        </button>
+
+        <button
+          className="btn-accent w-full"
+          onClick={() => {
+            setState(prev => ({ ...prev, success: false }));
+            setForm(initialForm);
+          }}
+          type="button"
+        >
+          Start Over
+        </button>
+
+        <button
+          className="btn-secondary w-full"
+          onClick={() => router.push('/login')}
+          type="button"
+        >
+          Go to Login
+        </button>
+      </div>
+
+      <div className="mt-6 text-gray-400 text-sm">
+        Already have an account?{' '}
+        <Link href="/login" className="text-accent hover:underline hover-underline">Sign in</Link>
+      </div>
+    </div>
+  );
+}
+
 // TypeScript types for form data and errors
 interface SignupForm {
   firstName: string;
@@ -55,6 +260,7 @@ export default function SignupPage() {
 
   // Check if this is a beta signup from pricing page
   const isBetaSignup = router.query.plan === 'founding';
+  const isPaidReturn = router.query.paid === 'true';
 
   // Environment-aware Stripe payment link (runtime evaluation)
   const isTesting = process.env.NEXT_PUBLIC_IS_TESTING === "true";
@@ -77,6 +283,14 @@ export default function SignupPage() {
     redirectCountdown: 30,
     captchaToken: ''
   });
+
+  // Handle users returning from successful Stripe payment
+  useEffect(() => {
+    if (isPaidReturn && !state.loading) {
+      // Show success message and redirect to dashboard
+      router.push('/dashboard');
+    }
+  }, [isPaidReturn, state.loading, router]);
 
   // Handle automatic redirect to login after successful signup
   useEffect(() => {
@@ -236,6 +450,7 @@ export default function SignupPage() {
 
           if (profileError) {
             console.error('Error inserting user profile:', profileError);
+            alert(`Profile error: ${profileError.message}`); // Temporary for debugging
             // Don't fail the signup if profile save fails - user can update later
           } else {
 
@@ -251,6 +466,7 @@ export default function SignupPage() {
 
           if (planError) {
             console.error('Error inserting user plan:', planError);
+            alert(`Plan error: ${planError.message}`); // Temporary for debugging
             // Don't fail the signup if plan assignment fails - user can be updated later
           } else {
           }
@@ -329,95 +545,34 @@ export default function SignupPage() {
       </Head>
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 px-4">
         <div className="card max-w-lg w-full mx-auto p-8 md:p-10 glass animate-fadeIn shadow-xl">
-          <h1 className="text-3xl font-bold text-center mb-2 gradient-text">
-            {isBetaSignup ? "Almost There! Create Your Account" : "Create your NexSellPro account"}
-          </h1>
-          <p className="text-center text-gray-400 mb-6">
-            {isBetaSignup ? "Just 30 seconds to unlock your Founding Member access" : "Join thousands of sellers finding profitable products on Walmart Marketplace"}
-          </p>
-
-          {state.success ? (
+          {isPaidReturn && (
             <div className="text-center">
-              <div className="text-2xl mb-4 text-accent">Check your email, {form.firstName}!</div>
-
-              {/* Enhanced success message with detailed instructions */}
-              <div className="bg-slate-800/50 rounded-lg p-4 mb-4 text-left">
-                <p className="text-gray-300 mb-3">
-                  We&rsquo;ve sent a confirmation link to <span className="font-semibold text-white">{form.email}</span>.
-                </p>
-
-                <div className="space-y-2 text-sm text-gray-400">
-                  <div className="flex items-start gap-2">
-                    <span className="text-accent mt-0.5">•</span>
-                    <span>Click the link in your email to activate your account</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-accent mt-0.5">•</span>
-                    <span>Check your spam/junk folder if you don&rsquo;t see it</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-accent mt-0.5">•</span>
-                    <span>The link expires in 1 hour for security</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-accent mt-0.5">•</span>
-                    <span>You&rsquo;ll be redirected to login in {state.redirectCountdown} seconds</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Feedback messages */}
-              {state.resent && (
-                <div className="text-green-400 text-sm mb-3 bg-green-400/10 rounded-lg p-2">
-                  ✓ Confirmation email resent successfully!
-                </div>
-              )}
-              {errors.general && (
-                <div className="text-red-400 text-sm mb-3 bg-red-400/10 rounded-lg p-2">
-                  {errors.general}
-                </div>
-              )}
-
-              {/* Action buttons */}
-              <div className="space-y-2">
-                <button
-                  className="btn-primary w-full"
-                  onClick={handleResend}
-                  disabled={state.loading}
-                  type="button"
-                >
-                  {state.loading ? 'Resending...' : 'Resend Email'}
-                </button>
-
-                <button
-                  className="btn-accent w-full"
-                  onClick={() => {
-                    setState(prev => ({ ...prev, success: false }));
-                    setForm(initialForm);
-                  }}
-                  type="button"
-                >
-                  Start Over
-                </button>
-
-                <button
-                  className="btn-secondary w-full"
-                  onClick={() => router.push('/login')}
-                  type="button"
-                >
-                  Go to Login
-                </button>
-              </div>
-
-              <div className="mt-6 text-gray-400 text-sm">
-                Already have an account?{' '}
-                <Link href="/login" className="text-accent hover:underline hover-underline">Sign in</Link>
-              </div>
+              <div className="text-green-400 text-6xl mb-4">🎉</div>
+              <h2 className="text-2xl font-bold mb-2 text-white">Payment Successful!</h2>
+              <p className="text-gray-400 mb-6">Welcome to NexSellPro Founding Members! Redirecting to your dashboard...</p>
             </div>
-          ) : (
-            <>
+          )}
 
-              <form onSubmit={handleSubmit} className="space-y-5">
+          {!isPaidReturn && (
+            <>
+              {isBetaSignup ? <BetaSignupHeader /> : <FreeSignupHeader />}
+
+              {state.success ? (
+                <SuccessMessage 
+                  isBetaSignup={isBetaSignup}
+                  form={form}
+                  state={state}
+                  errors={errors}
+                  handleResend={handleResend}
+                  setState={setState}
+                  setForm={setForm}
+                  initialForm={initialForm}
+                  router={router}
+                />
+              ) : (
+                <>
+
+                  <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Name Fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="relative">
@@ -602,19 +757,7 @@ export default function SignupPage() {
                 {errors.captcha && <div className="text-red-400 text-sm text-center">{errors.captcha}</div>}
                 {errors.general && <div className="text-red-500 text-sm text-center">{errors.general}</div>}
 
-                <button
-                  type="submit"
-                  className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                  disabled={state.loading}
-                >
-                  {state.loading && (
-                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                    </svg>
-                  )}
-                  {state.loading ? 'Signing up...' : (isBetaSignup ? 'Create Account & Continue to Payment →' : 'Sign Up')}
-                </button>
+                <SubmitButton loading={state.loading} isBetaSignup={isBetaSignup} />
 
                 <div className="mt-4 text-xs text-gray-400 text-center">
                   By signing up, you agree to our{' '}
@@ -626,6 +769,8 @@ export default function SignupPage() {
                   <Link href="/login" className="text-accent hover:underline hover-underline">Sign in</Link>
                 </div>
               </form>
+            </>
+          )}
             </>
           )}
         </div>

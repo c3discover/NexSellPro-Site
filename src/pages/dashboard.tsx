@@ -29,17 +29,17 @@ export default function DashboardPage() {
       try {
         // Check authentication status first
         const authStatus = await checkAuthStatus();
-        
+
         if (!authStatus.isAuthenticated || !authStatus.user) {
           // No valid session, redirect to login
-  
+
           router.replace('/login');
           return;
         }
 
         // User is authenticated, set user data
         setUser(authStatus.user);
-        
+
         // Fetch user profile and plan
         const [profile, plan] = await Promise.all([
           getUserProfile(authStatus.user.id),
@@ -47,7 +47,7 @@ export default function DashboardPage() {
         ]);
         setUserProfile(profile);
         setUserPlan(plan);
-        
+
       } catch (error) {
         console.error('Failed to check authentication or load user data:', error);
         // On error, redirect to login for security
@@ -56,7 +56,7 @@ export default function DashboardPage() {
         setLoading(false);
       }
     }
-    
+
     checkAuthAndLoadData();
   }, [router]);
 
@@ -237,7 +237,7 @@ export default function DashboardPage() {
               </p>
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6">
                 <p className="text-yellow-400 text-sm">
-                  <strong>Coming Soon!</strong> The Chrome extension is currently in development. 
+                  <strong>Coming Soon!</strong> The Chrome extension is currently in development.
                   You&rsquo;ll be notified as soon as it&rsquo;s ready for download.
                 </p>
               </div>
@@ -295,7 +295,12 @@ export default function DashboardPage() {
                   <div>
                     <div className="font-medium text-white">Subscription Plan</div>
                     <div className="text-sm text-accent font-medium">
-                      {userPlan?.plan ? userPlan.plan.charAt(0).toUpperCase() + userPlan.plan.slice(1) : 'Free'}
+                      <span className={userPlan?.plan === 'founding'
+                        ? "text-gray-600 cursor-not-allowed text-sm"
+                        : "text-orange-400 hover:text-orange-300 text-sm cursor-pointer"
+                      }>
+                        {userPlan?.plan === 'founding' ? 'Lifetime Member' : 'Upgrade'}
+                      </span>
                     </div>
                   </div>
                   <a

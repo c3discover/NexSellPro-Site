@@ -421,7 +421,7 @@ export default function DashboardPage() {
                 <h4 className="text-xl font-semibold text-white mb-2">Ready to Start Finding Profitable Products?</h4>
                 <p className="text-gray-300 mb-4">Install the extension and analyze your first product in under 30 seconds</p>
                 <a
-                  href="https://chrome.google.com/webstore/detail/nexsellpro/PLACEHOLDER_ID"
+                  href="https://chromewebstore.google.com/detail/nexsellpro/oeoabefdhedmaeoghdmbcechbiepmfpc"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-primary inline-flex items-center gap-3 text-lg px-8 py-4"

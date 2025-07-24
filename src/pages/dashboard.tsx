@@ -131,48 +131,182 @@ export default function DashboardPage() {
         <main className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto space-y-8">
             {/* Welcome Section */}
-            <div className="card p-8">
-              <h2 className="text-3xl font-bold mb-4 gradient-text">
-                Welcome to NexSellPro, {userProfile?.first_name || 'there'}!
-              </h2>
-              <p className="text-gray-300 mb-6">
-                You&rsquo;re all set up! Here&rsquo;s what you need to do next to start finding profitable products on Walmart Marketplace.
-              </p>
-              <div className="bg-accent/10 border border-accent/20 rounded-lg p-6 mb-6">
-                <h3 className="text-xl font-semibold mb-3 text-accent">🚀 Next Steps</h3>
-                <ol className="space-y-3 text-gray-300">
-                  <li className="flex items-start">
-                    <span className="bg-accent text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 mt-0.5">1</span>
-                    <div>
-                      <strong>Download the Chrome Extension</strong>
-                      <p className="text-sm text-gray-400 mt-1">Install our browser extension to analyze products directly on Walmart.com</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="bg-accent text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 mt-0.5">2</span>
-                    <div>
-                      <strong>Browse Walmart Marketplace</strong>
-                      <p className="text-sm text-gray-400 mt-1">Go to any product page and click the NexSellPro button to analyze it</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="bg-accent text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mr-3 mt-0.5">3</span>
-                    <div>
-                      <strong>Export Profitable Finds</strong>
-                      <p className="text-sm text-gray-400 mt-1">Save promising products to your dashboard and export to Google Sheets</p>
-                    </div>
-                  </li>
-                </ol>
+            <div className="card p-8 bg-gradient-to-br from-slate-800/50 to-slate-700/50 border border-slate-600/30">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h2 className="text-3xl font-bold mb-2 gradient-text">
+                    Welcome to NexSellPro, {userProfile?.first_name || 'there'}! 🎉
+                  </h2>
+                  <p className="text-gray-300 text-lg">
+                    You're ready to unlock profitable products on Walmart Marketplace
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2 bg-green-500/20 border border-green-500/30 rounded-full px-4 py-2">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-green-400 text-sm font-medium">Active</span>
+                </div>
               </div>
+
+              {/* Plan Status */}
+              <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg p-6 mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold text-white mb-1">
+                      {userPlan?.plan === 'founding' ? '🎯 Founding Member' : '🚀 Free Plan'}
+                    </h3>
+                    <p className="text-gray-300">
+                      {userPlan?.plan === 'founding' 
+                        ? 'Full access to all features until launch' 
+                        : 'Basic features available - upgrade for full access'
+                      }
+                    </p>
+                  </div>
+                  {userPlan?.plan === 'free' && (
+                    <a
+                      href={stripeLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-primary px-4 py-2 text-sm font-medium"
+                    >
+                      Upgrade to Founding Member
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Start Guide */}
+              <div className="bg-accent/10 border border-accent/20 rounded-lg p-6 mb-6">
+                <h3 className="text-xl font-semibold mb-4 text-accent flex items-center">
+                  <span className="mr-2">⚡</span>
+                  Get Started in 3 Steps
+                </h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-slate-700/50 rounded-lg">
+                    <div className="w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-3">1</div>
+                    <h4 className="font-semibold text-white mb-2">Install Extension</h4>
+                    <p className="text-sm text-gray-400">Add NexSellPro to Chrome for instant analysis</p>
+                  </div>
+                  <div className="text-center p-4 bg-slate-700/50 rounded-lg">
+                    <div className="w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-3">2</div>
+                    <h4 className="font-semibold text-white mb-2">Browse Products</h4>
+                    <p className="text-sm text-gray-400">Visit any Walmart product page to analyze</p>
+                  </div>
+                  <div className="text-center p-4 bg-slate-700/50 rounded-lg">
+                    <div className="w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-3">3</div>
+                    <h4 className="font-semibold text-white mb-2">Find Winners</h4>
+                    <p className="text-sm text-gray-400">Export profitable finds to Google Sheets</p>
+                  </div>
+                </div>
+              </div>
+
               <a
                 href="#extension-download"
-                className="btn-primary inline-flex items-center gap-2"
+                className="btn-primary inline-flex items-center gap-2 text-lg px-6 py-3"
               >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
                 Download Chrome Extension
               </a>
+            </div>
+
+            {/* Feature Access Section */}
+            <div className="card p-8 bg-gradient-to-br from-slate-800/50 to-slate-700/50 border border-slate-600/30">
+              <h3 className="text-2xl font-bold mb-6 gradient-text flex items-center">
+                <span className="mr-3">🎯</span>
+                Your Feature Access
+              </h3>
+              
+              <div className="grid md:grid-cols-2 gap-8">
+                {/* Free Features */}
+                <div className="bg-slate-700/30 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                    <span className="mr-2">🚀</span>
+                    Free Features
+                  </h4>
+                  <ul className="space-y-3">
+                    <li className="flex items-start">
+                      <span className="text-green-400 mr-3 mt-1">✓</span>
+                      <div>
+                        <span className="text-white font-medium">Product Overview</span>
+                        <p className="text-sm text-gray-400">Basic product information and pricing</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-green-400 mr-3 mt-1">✓</span>
+                      <div>
+                        <span className="text-white font-medium">Profit Calculator</span>
+                        <p className="text-sm text-gray-400">Calculate profit margins and ROI</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-green-400 mr-3 mt-1">✓</span>
+                      <div>
+                        <span className="text-white font-medium">Basic Analysis</span>
+                        <p className="text-sm text-gray-400">Limited competition data</p>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Premium Features */}
+                <div className="bg-gradient-to-br from-accent/10 to-blue-500/10 border border-accent/20 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                    <span className="mr-2">⭐</span>
+                    {userPlan?.plan === 'founding' ? 'Founding Member Features' : 'Premium Features'}
+                  </h4>
+                  <ul className="space-y-3">
+                    <li className="flex items-start">
+                      <span className="text-accent mr-3 mt-1">✓</span>
+                      <div>
+                        <span className="text-white font-medium">Buy Gauge</span>
+                        <p className="text-sm text-gray-400">Proprietary scoring system</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-accent mr-3 mt-1">✓</span>
+                      <div>
+                        <span className="text-white font-medium">Advanced Analysis</span>
+                        <p className="text-sm text-gray-400">Complete competition breakdown</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-accent mr-3 mt-1">✓</span>
+                      <div>
+                        <span className="text-white font-medium">Google Sheets Export</span>
+                        <p className="text-sm text-gray-400">One-click data export</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-accent mr-3 mt-1">✓</span>
+                      <div>
+                        <span className="text-white font-medium">Product Variations</span>
+                        <p className="text-sm text-gray-400">Analyze all product variants</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-accent mr-3 mt-1">✓</span>
+                      <div>
+                        <span className="text-white font-medium">Listing Export</span>
+                        <p className="text-sm text-gray-400">Export optimized listings</p>
+                      </div>
+                    </li>
+                  </ul>
+                  
+                  {userPlan?.plan === 'free' && (
+                    <div className="mt-6 pt-4 border-t border-accent/20">
+                      <a
+                        href={stripeLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-primary w-full text-center"
+                      >
+                        Upgrade to Founding Member - $29
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Founding Member Bonus Section - Only shown to founding member plan users */}
@@ -215,43 +349,111 @@ export default function DashboardPage() {
 
             {/* Quick Stats */}
             <div className="grid md:grid-cols-3 gap-6">
-              <div className="card p-6 text-center">
-                <div className="text-3xl font-bold text-accent mb-2">0</div>
-                <div className="text-gray-400">Products Analyzed</div>
+              <div className="card p-6 text-center bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20">
+                <div className="text-4xl font-bold text-blue-400 mb-2">0</div>
+                <div className="text-gray-300 font-medium">Products Analyzed</div>
+                <div className="text-xs text-gray-500 mt-1">Start analyzing to see your progress</div>
               </div>
-              <div className="card p-6 text-center">
-                <div className="text-3xl font-bold text-green-400 mb-2">0</div>
-                <div className="text-gray-400">Profitable Finds</div>
+              <div className="card p-6 text-center bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20">
+                <div className="text-4xl font-bold text-green-400 mb-2">0</div>
+                <div className="text-gray-300 font-medium">Profitable Finds</div>
+                <div className="text-xs text-gray-500 mt-1">Products with good profit potential</div>
               </div>
-              <div className="card p-6 text-center">
-                <div className="text-3xl font-bold text-blue-400 mb-2">0</div>
-                <div className="text-gray-400">Saved Products</div>
+              <div className="card p-6 text-center bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20">
+                <div className="text-4xl font-bold text-purple-400 mb-2">0</div>
+                <div className="text-gray-300 font-medium">Saved Products</div>
+                <div className="text-xs text-gray-500 mt-1">Added to your product list</div>
               </div>
             </div>
 
             {/* Extension Download Section */}
-            <div id="extension-download" className="card p-8">
-              <h3 className="text-2xl font-bold mb-4 gradient-text">Chrome Extension</h3>
-              <p className="text-gray-300 mb-6">
-                Our browser extension is the key to unlocking NexSellPro&rsquo;s power. Install it to start analyzing products instantly.
-              </p>
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6">
-                <p className="text-yellow-400 text-sm">
-                  <strong>Coming Soon!</strong> The Chrome extension is currently in development. 
-                  You&rsquo;ll be notified as soon as it&rsquo;s ready for download.
-                </p>
+            <div id="extension-download" className="card p-8 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h3 className="text-2xl font-bold mb-2 gradient-text flex items-center">
+                    <span className="mr-3">🔧</span>
+                    Chrome Extension
+                  </h3>
+                  <p className="text-gray-300 text-lg">
+                    Your secret weapon for finding profitable products on Walmart Marketplace
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2 bg-green-500/20 border border-green-500/30 rounded-full px-3 py-1">
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  <span className="text-green-400 text-sm font-medium">Ready</span>
+                </div>
               </div>
-              <button className="btn-primary opacity-60 cursor-not-allowed" disabled>
-                Extension Coming Soon
-              </button>
+
+              {/* Extension Features */}
+              <div className="grid md:grid-cols-2 gap-6 mb-8">
+                <div className="bg-slate-700/50 rounded-lg p-4">
+                  <h4 className="font-semibold text-white mb-2 flex items-center">
+                    <span className="text-green-400 mr-2">✓</span>
+                    Instant Analysis
+                  </h4>
+                  <p className="text-sm text-gray-400">See profit margins and ROI in real-time on any Walmart product</p>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg p-4">
+                  <h4 className="font-semibold text-white mb-2 flex items-center">
+                    <span className="text-green-400 mr-2">✓</span>
+                    Buy Gauge
+                  </h4>
+                  <p className="text-sm text-gray-400">Our proprietary scoring system shows product buyability</p>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg p-4">
+                  <h4 className="font-semibold text-white mb-2 flex items-center">
+                    <span className="text-green-400 mr-2">✓</span>
+                    Competition Data
+                  </h4>
+                  <p className="text-sm text-gray-400">View buy box ownership and seller performance</p>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg p-4">
+                  <h4 className="font-semibold text-white mb-2 flex items-center">
+                    <span className="text-green-400 mr-2">✓</span>
+                    Google Sheets Export
+                  </h4>
+                  <p className="text-sm text-gray-400">One-click export of profitable finds to your spreadsheet</p>
+                </div>
+              </div>
+
+              {/* Download CTA */}
+              <div className="bg-gradient-to-r from-accent/20 to-blue-500/20 border border-accent/30 rounded-lg p-6 text-center">
+                <h4 className="text-xl font-semibold text-white mb-2">Ready to Start Finding Profitable Products?</h4>
+                <p className="text-gray-300 mb-4">Install the extension and analyze your first product in under 30 seconds</p>
+                <a
+                  href="https://chrome.google.com/webstore/detail/nexsellpro/PLACEHOLDER_ID"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary inline-flex items-center gap-3 text-lg px-8 py-4"
+                >
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                  Install Extension
+                </a>
+                <p className="text-sm text-gray-400 mt-3">Free • No credit card required • 30-second setup</p>
+              </div>
             </div>
 
             {/* Recent Activity */}
-            <div className="card p-8">
-              <h3 className="text-2xl font-bold mb-4 gradient-text">Recent Activity</h3>
-              <div className="text-center py-8 text-gray-400">
-                <div className="text-4xl mb-4">📊</div>
-                <p>No activity yet. Start analyzing products to see your history here!</p>
+            <div className="card p-8 bg-gradient-to-br from-slate-800/50 to-slate-700/50 border border-slate-600/30">
+              <h3 className="text-2xl font-bold mb-4 gradient-text flex items-center">
+                <span className="mr-3">📊</span>
+                Recent Activity
+              </h3>
+              <div className="text-center py-12 text-gray-400">
+                <div className="text-6xl mb-6">🚀</div>
+                <h4 className="text-xl font-semibold text-white mb-2">Ready to Start Your Journey?</h4>
+                <p className="text-gray-400 mb-6">Install the extension and analyze your first product to see your activity here</p>
+                <a
+                  href="#extension-download"
+                  className="btn-accent inline-flex items-center gap-2"
+                >
+                  <span>Get Started</span>
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </a>
               </div>
             </div>
 

@@ -145,7 +145,7 @@ function HeroSection({ stripeLink }: { stripeLink: string }) {
         </div>
         {/* Trust indicator and login banner */}
         <p className="mt-4 text-sm text-gray-500 mb-4">
-          🚀 Built by sellers, for sellers • Limited time beta pricing
+          🚀 Built by sellers, for sellers • Limited time founding member pricing
         </p>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 max-w-md mx-auto">
           <p className="text-sm text-blue-800">
@@ -349,7 +349,7 @@ function PricingSection({ stripeLink }: { stripeLink: string }) {
         {/* Pricing card */}
         <div className="max-w-md mx-auto bg-white border-2 border-blue-600 rounded-lg shadow-xl p-8 text-center">
           <div className="text-sm font-semibold text-blue-600 mb-2">
-            LIMITED BETA ACCESS
+            LIMITED FOUNDING MEMBER ACCESS
           </div>
           <h3 className="text-2xl font-bold mb-2 text-gray-900">Early Adopter Pricing</h3>
           <div className="text-5xl font-bold mb-4 text-gray-900">
@@ -357,15 +357,15 @@ function PricingSection({ stripeLink }: { stripeLink: string }) {
             <span className="text-lg text-gray-500 line-through ml-2">$99</span>
           </div>
           <p className="text-gray-700 mb-6">
-            Join now and lock in this price forever. Help shape the future 
-            of NexSellPro with your feedback.
+            Access until launch (minimum two months of full, unrestricted access). 
+            Help shape the future of NexSellPro with your feedback.
           </p>
           
           {/* What's included */}
           <ul className="text-left mb-8 space-y-2">
             <li className="flex items-start">
               <span className="text-green-500 mr-2">✓</span>
-              <span className="text-gray-800">Lifetime access at this price</span>
+              <span className="text-gray-800">Full access until launch (min two months)</span>
             </li>
             <li className="flex items-start">
               <span className="text-green-500 mr-2">✓</span>
@@ -383,10 +383,18 @@ function PricingSection({ stripeLink }: { stripeLink: string }) {
               <span className="text-green-500 mr-2">✓</span>
               <span className="text-gray-800">Vote on new features</span>
             </li>
+            <li className="flex items-start">
+              <span className="text-green-500 mr-2">✓</span>
+              <span className="text-gray-800">Founding member discount codes</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-green-500 mr-2">✓</span>
+              <span className="text-gray-800">Referral bonus opportunities</span>
+            </li>
           </ul>
           
           {/* CTA button */}
-          {/* Redirects to signup page for beta users */}
+          {/* Redirects to signup page for founding members */}
           <a 
             href="/signup?plan=founding"
             className="block w-full bg-blue-600 text-white py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
@@ -395,7 +403,7 @@ function PricingSection({ stripeLink }: { stripeLink: string }) {
           </a>
           
           <p className="mt-4 text-sm text-gray-600">
-            One-time payment • Instant access • 30-day guarantee
+            One-time payment • Instant access • 30-day guarantee • Free profit calculator always available
           </p>
         </div>
       </div>
@@ -484,8 +492,10 @@ function FAQSection() {
               Is this a one-time payment or subscription?
             </h3>
             <p className="text-gray-700">
-              The $29 Founding Member price is a one-time payment for lifetime access. 
-              No monthly fees, no surprises. This special pricing is only available during beta.
+              The $29 Founding Member price is a one-time payment for access until launch 
+              (minimum two months). After launch, you'll need a subscription, but founding 
+              members get special discount codes and referral bonuses. The profit calculator 
+              and product overview will always be free.
             </p>
           </div>
           

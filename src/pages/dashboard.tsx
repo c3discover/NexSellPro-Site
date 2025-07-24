@@ -175,14 +175,14 @@ export default function DashboardPage() {
               </a>
             </div>
 
-            {/* Founding Member Bonus Section - Only shown to beta plan users */}
-            {userPlan?.plan === 'beta' && (
+            {/* Founding Member Bonus Section - Only shown to founding member plan users */}
+            {userPlan?.plan === 'founding' && (
               <div className="card p-8">
                 <h2 className="text-2xl font-bold mb-4 gradient-text">
                   🎁 Founding Member Bonus
                 </h2>
                 <p className="text-gray-300 mb-6">
-                  Thanks for supporting NexSellPro early. Here&rsquo;s your exclusive bonus:
+                  Thanks for being a founding member! Here&rsquo;s your exclusive bonus:
                 </p>
                 <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg p-6">
                   <div className="flex items-center justify-between">

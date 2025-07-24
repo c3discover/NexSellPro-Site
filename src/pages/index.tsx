@@ -120,7 +120,9 @@ function HeroSection({ stripeLink }: { stripeLink: string }) {
       <div className="container mx-auto max-w-4xl text-center">
         {/* Main headline - make this compelling! */}
         <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-          Find Profitable Products in Seconds
+          Unlock Profitable Products.
+          <br />
+          Instantly.
         </h1>
         {/* Subheadline - explain the value */}
         <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-2xl mx-auto">
@@ -182,11 +184,11 @@ function BenefitsSection() {
           
           {/* Benefit 2 */}
           <div className="text-center">
-            <div className="text-4xl mb-4">📊</div>
-            <h3 className="text-xl font-semibold mb-2 text-gray-900">Sales Volume Estimates</h3>
+            <div className="text-4xl mb-4">🎯</div>
+            <h3 className="text-xl font-semibold mb-2 text-gray-900">The Buy Gauge</h3>
             <p className="text-gray-700">
-              Get monthly sales estimates and see buy box prices, competition 
-              levels, and seller information at a glance.
+              Our proprietary scoring system shows you at a glance whether 
+              a product is worth sourcing. No more guesswork.
             </p>
           </div>
           

@@ -17,6 +17,7 @@
  * - processing: Initial state, handling auth
  * - confirmed: Auth successful, redirecting
  * - error: Auth failed, showing error before redirect
+ * - password_reset: Showing password reset form (for recovery type)
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -24,7 +25,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
 import Head from 'next/head';
 
-type AuthState = 'processing' | 'confirmed' | 'error';
+type AuthState = 'processing' | 'confirmed' | 'error' | 'password_reset';
 type AuthType = 'signup' | 'recovery' | 'magic_link' | 'unknown';
 
 export default function AuthCallback() {
@@ -32,6 +33,13 @@ export default function AuthCallback() {
   const [state, setState] = useState<AuthState>('processing');
   const [error, setError] = useState<string | null>(null);
   const [authType, setAuthType] = useState<AuthType>('unknown');
+  
+  // Password reset form state
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Refs for cleanup and timeout management
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -43,8 +51,6 @@ export default function AuthCallback() {
   const parseUrlParams = (): { type: AuthType; hasError: boolean; errorMessage: string | null } => {
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const queryParams = new URLSearchParams(window.location.search);
-
-
 
     // Check for errors first
     const errorParam = hashParams.get('error') || queryParams.get('error');
@@ -71,8 +77,48 @@ export default function AuthCallback() {
       authType = 'magic_link';
     }
 
-
     return { type: authType, hasError: false, errorMessage: null };
+  };
+
+  // Handle password reset form submission
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    
+    // Validate passwords
+    if (!password || password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      setError('Password must contain uppercase, lowercase, and numbers.');
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: password
+      });
+
+      if (error) {
+        setError(error.message);
+      } else {
+        // Redirect to dashboard after successful password reset
+        await router.replace('/dashboard');
+      }
+    } catch {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Attempt to get or establish session
@@ -108,7 +154,13 @@ export default function AuthCallback() {
 
   // Handle successful authentication
   const handleSuccess = useCallback(async (type: AuthType) => {
-    // Authentication successful for type: ${type}
+    // For recovery type, show password reset form instead of redirecting
+    if (type === 'recovery') {
+      setState('password_reset');
+      return;
+    }
+
+    // Authentication successful for other types
     setState('confirmed');
 
     // Get the current user session
@@ -187,8 +239,6 @@ export default function AuthCallback() {
       switch (type) {
         case 'signup':
           return '/dashboard';
-        case 'recovery':
-          return '/reset-password';
         case 'magic_link':
           return '/dashboard';
         default:
@@ -252,7 +302,6 @@ export default function AuthCallback() {
       // Check if user is already authenticated
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-
         handleSuccess('signup');
         return;
       } else {
@@ -287,7 +336,6 @@ export default function AuthCallback() {
       retryCountRef.current++;
 
       if (retryCountRef.current < maxRetries) {
-
         // Shorter retry intervals (1 second instead of 2)
         setTimeout(attemptSessionEstablishment, 1000);
       } else {
@@ -330,6 +378,120 @@ export default function AuthCallback() {
       }
     };
   }, [processAuth]);
+
+  // Render password reset form
+  if (state === 'password_reset') {
+    return (
+      <>
+        <Head>
+          <title>Set New Password | NexSellPro</title>
+        </Head>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 px-4">
+          <div className="card max-w-md w-full mx-auto p-8 md:p-10 glass animate-fadeIn shadow-xl">
+            <h1 className="text-3xl font-bold text-center mb-2 gradient-text">Set New Password</h1>
+            <p className="text-center text-gray-400 mb-6">
+              Enter your new password below.
+            </p>
+            
+            <form onSubmit={handlePasswordReset} className="space-y-5">
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-200 mb-1">
+                  New Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-3 pr-12 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition"
+                    placeholder="Enter new password"
+                    disabled={loading}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
+                    disabled={loading}
+                  >
+                    {showPassword ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  At least 8 characters with uppercase, lowercase, and numbers
+                </p>
+              </div>
+              
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-200 mb-1">
+                  Confirm New Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-3 pr-12 rounded-lg bg-slate-800 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent transition"
+                    placeholder="Confirm new password"
+                    disabled={loading}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
+                    disabled={loading}
+                  >
+                    {showConfirmPassword ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+              
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                  <p className="text-red-400 text-sm">{error}</p>
+                </div>
+              )}
+              
+              <button
+                type="submit"
+                className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={loading}
+              >
+                {loading && (
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                  </svg>
+                )}
+                {loading ? 'Updating...' : 'Update Password'}
+              </button>
+            </form>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // Render based on state
   return (

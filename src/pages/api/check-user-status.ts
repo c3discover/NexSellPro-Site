@@ -30,6 +30,7 @@ export default async function handler(
 
     if (error || !userPlan) {
       return res.status(200).json({ 
+        success: false,
         isPaid: false, 
         plan: 'free',
         message: 'User not found'
@@ -41,6 +42,7 @@ export default async function handler(
     const isPaid = plan === 'founding' || plan === 'beta' || plan === 'founder'
 
     return res.status(200).json({
+      success: true,
       isPaid,
       plan: userPlan.plan, // Return original case
       message: isPaid ? 'User is paid' : 'User is free'
@@ -49,6 +51,7 @@ export default async function handler(
   } catch (error) {
     console.error('API Error:', error)
     return res.status(500).json({ 
+      success: false,
       error: 'Internal server error',
       isPaid: false,
       plan: 'free'

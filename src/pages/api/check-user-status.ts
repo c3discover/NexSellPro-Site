@@ -36,11 +36,13 @@ export default async function handler(
       })
     }
 
-    const isPaid = userPlan.plan === 'founding' || userPlan.plan === 'beta'
+    // Check for paid plans (case insensitive)
+    const plan = userPlan.plan?.toLowerCase()
+    const isPaid = plan === 'founding' || plan === 'beta' || plan === 'founder'
 
     return res.status(200).json({
       isPaid,
-      plan: userPlan.plan,
+      plan: userPlan.plan, // Return original case
       message: isPaid ? 'User is paid' : 'User is free'
     })
 

@@ -25,7 +25,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
 import Head from 'next/head';
 
-type AuthState = 'processing' | 'confirmed' | 'error' | 'password_reset';
+type AuthState = 'processing' | 'confirmed' | 'error' | 'password_reset' | 'expired_recovery';
 type AuthType = 'signup' | 'recovery' | 'magic_link' | 'unknown';
 
 export default function AuthCallback() {
@@ -318,7 +318,32 @@ export default function AuthCallback() {
 
     // Special handling for recovery type - Supabase recovery links don't automatically establish sessions
     if (type === 'recovery') {
-      console.log('[Auth Callback] Recovery type detected, showing password reset form directly');
+      console.log('[Auth Callback] Recovery type detected, checking if link is expired...');
+      
+      // Check if there's a session or if the link is still valid
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        // No session means the recovery link might be expired
+        // Check if we can detect this from the URL or try to process it
+        console.log('[Auth Callback] No session found for recovery, checking if link is expired');
+        
+        // Try to refresh session to see if we get an error
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError) {
+          console.log('[Auth Callback] Session refresh failed, likely expired recovery link:', refreshError);
+          // Check if it's the specific stale URL error
+          if (refreshError.message && refreshError.message.includes('stale')) {
+            console.log('[Auth Callback] Detected expired recovery link');
+            setState('expired_recovery');
+            return;
+          }
+        }
+      }
+      
+      // If we have a session or no specific error, show the password reset form
+      console.log('[Auth Callback] Recovery link appears valid, showing password reset form');
       setState('password_reset');
       return;
     }
@@ -520,6 +545,40 @@ export default function AuthCallback() {
                 {loading ? 'Updating...' : 'Update Password'}
               </button>
             </form>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Render expired recovery link message
+  if (state === 'expired_recovery') {
+    return (
+      <>
+        <Head>
+          <title>Link Expired | NexSellPro</title>
+        </Head>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 px-4">
+          <div className="card max-w-md w-full mx-auto p-8 md:p-10 glass animate-fadeIn shadow-xl text-center">
+            <div className="text-5xl mb-4">⏰</div>
+            <h1 className="text-2xl font-bold mb-4 gradient-text">Link Expired</h1>
+            <p className="text-gray-400 mb-6">
+              This password reset link has expired. Password reset links are only valid for a short time for security reasons.
+            </p>
+            <div className="space-y-3">
+              <a 
+                href="/reset-password-request" 
+                className="btn-primary w-full inline-block"
+              >
+                Request New Reset Link
+              </a>
+              <a 
+                href="/login" 
+                className="text-accent hover:text-accent-light transition-colors text-sm"
+              >
+                Back to Login
+              </a>
+            </div>
           </div>
         </div>
       </>

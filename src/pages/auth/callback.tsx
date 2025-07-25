@@ -52,6 +52,13 @@ export default function AuthCallback() {
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const queryParams = new URLSearchParams(window.location.search);
 
+    console.log('[Auth Callback] URL parsing:', {
+      hash: window.location.hash,
+      search: window.location.search,
+      hashParams: Object.fromEntries(hashParams.entries()),
+      queryParams: Object.fromEntries(queryParams.entries())
+    });
+
     // Check for errors first
     const errorParam = hashParams.get('error') || queryParams.get('error');
     const errorDescription = hashParams.get('error_description') || queryParams.get('error_description');
@@ -76,6 +83,8 @@ export default function AuthCallback() {
     } else if (type === 'magic_link') {
       authType = 'magic_link';
     }
+
+    console.log('[Auth Callback] Auth type determined:', { type, authType });
 
     return { type: authType, hasError: false, errorMessage: null };
   };
@@ -124,13 +133,19 @@ export default function AuthCallback() {
   // Attempt to get or establish session
   const establishSession = async (): Promise<boolean> => {
     try {
+      console.log('[Auth Callback] Attempting to establish session...');
+      
       // First, try to get the current session
       const { data: { session: currentSession } } = await supabase.auth.getSession();
+      console.log('[Auth Callback] Current session check:', { hasSession: !!currentSession });
+      
       if (currentSession) {
+        console.log('[Auth Callback] Session already exists');
         return true;
       }
 
       // If no session, try to refresh to establish one
+      console.log('[Auth Callback] No current session, trying to refresh...');
       const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
 
       if (refreshError) {
@@ -139,11 +154,14 @@ export default function AuthCallback() {
       }
 
       if (refreshedSession) {
+        console.log('[Auth Callback] Session refreshed successfully');
         return true;
       }
 
       // Final attempt: check if session was established via URL processing
+      console.log('[Auth Callback] Final session check...');
       const { data: { session: finalSession } } = await supabase.auth.getSession();
+      console.log('[Auth Callback] Final session result:', { hasSession: !!finalSession });
 
       return !!finalSession;
     } catch (error) {
@@ -154,12 +172,8 @@ export default function AuthCallback() {
 
   // Handle successful authentication
   const handleSuccess = useCallback(async (type: AuthType) => {
-    // For recovery type, show password reset form instead of redirecting
-    if (type === 'recovery') {
-      setState('password_reset');
-      return;
-    }
-
+    console.log('[Auth Callback] handleSuccess called with type:', type);
+    
     // Authentication successful for other types
     setState('confirmed');
 
@@ -246,6 +260,8 @@ export default function AuthCallback() {
       }
     })();
 
+    console.log('[Auth Callback] Redirecting to:', redirectPath);
+
     try {
       await router.replace(redirectPath);
     } catch (error) {
@@ -287,11 +303,23 @@ export default function AuthCallback() {
 
   // Main auth processing logic
   const processAuth = useCallback(async () => {
+    console.log('[Auth Callback] Starting auth processing...');
+    
     const { type, hasError, errorMessage } = parseUrlParams();
     setAuthType(type);
 
+    console.log('[Auth Callback] Parsed params:', { type, hasError, errorMessage });
+
     if (hasError) {
+      console.log('[Auth Callback] Has error, calling handleError');
       handleError(errorMessage!, type);
+      return;
+    }
+
+    // Special handling for recovery type - Supabase recovery links don't automatically establish sessions
+    if (type === 'recovery') {
+      console.log('[Auth Callback] Recovery type detected, showing password reset form directly');
+      setState('password_reset');
       return;
     }
 
@@ -302,6 +330,7 @@ export default function AuthCallback() {
       // Check if user is already authenticated
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        console.log('[Auth Callback] Session found for unknown type, treating as signup');
         handleSuccess('signup');
         return;
       } else {
@@ -311,7 +340,10 @@ export default function AuthCallback() {
       }
     }
 
+    console.log('[Auth Callback] Auth type detected:', type);
+
     // Give Supabase time to process URL tokens (reduced from 2000ms to 1000ms)
+    console.log('[Auth Callback] Waiting for Supabase to process URL tokens...');
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Set up maximum wait time
@@ -322,9 +354,12 @@ export default function AuthCallback() {
 
     // Retry logic for session establishment with shorter intervals
     const attemptSessionEstablishment = async (): Promise<void> => {
+      console.log(`[Auth Callback] Session establishment attempt ${retryCountRef.current + 1}/${maxRetries + 1}`);
+      
       const hasSession = await establishSession();
 
       if (hasSession) {
+        console.log('[Auth Callback] Session established successfully, calling handleSuccess');
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
           timeoutRef.current = null;
@@ -336,6 +371,7 @@ export default function AuthCallback() {
       retryCountRef.current++;
 
       if (retryCountRef.current < maxRetries) {
+        console.log(`[Auth Callback] Session establishment failed, retrying in 1 second...`);
         // Shorter retry intervals (1 second instead of 2)
         setTimeout(attemptSessionEstablishment, 1000);
       } else {
@@ -349,9 +385,6 @@ export default function AuthCallback() {
         switch (type) {
           case 'signup':
             handleError('Email confirmed successfully! Please log in with your credentials.', type);
-            break;
-          case 'recovery':
-            handleError('Invalid or expired reset link. Please request a new one.', type);
             break;
           case 'magic_link':
             handleError('Magic link expired or invalid. Please try again.', type);

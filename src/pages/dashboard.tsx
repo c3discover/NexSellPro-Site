@@ -20,9 +20,6 @@ export default function DashboardPage() {
     ? "https://buy.stripe.com/bJeeVddD856nfzCc0b6Zy00" // Live
     : "https://buy.stripe.com/test_bJeeVddD856nfzCc0b6Zy00"; // Test
 
-  // Debug logging
-  console.log(`Stripe link loaded in ${isProd ? "PRODUCTION (live mode)" : "TEST mode"}`);
-
   // Check authentication and load user data on page load
   useEffect(() => {
     async function checkAuthAndLoadData() {

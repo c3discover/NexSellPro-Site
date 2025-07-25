@@ -434,29 +434,11 @@ export default function SignupPage() {
 
       // Step 2: Handle success based on signup type
       if (isBetaSignup && data.user) {
-        // Enhanced debugging with delay to ensure database trigger completes
-        console.log('=== BETA SIGNUP FLOW DEBUG ===');
-        console.log('1. User successfully created');
-        console.log('   - User ID:', data.user.id);
-        console.log('   - User email:', data.user.email);
-        console.log('   - Current time:', new Date().toISOString());
-        
-        // IMPORTANT: Wait 1.5 seconds for database trigger to complete
-        console.log('2. Waiting for database trigger to create records...');
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Build the Stripe redirect URL
+        // User successfully created, now redirect to Stripe
         const clientReferenceId = data.user.id;
-        const userEmail = data.user.email || '';
-        const redirectUrl = `${stripeLink}?client_reference_id=${clientReferenceId}&prefilled_email=${encodeURIComponent(userEmail)}`;
+        const redirectUrl = `${stripeLink}?client_reference_id=${clientReferenceId}`;
         
-        console.log('3. Stripe redirect details:');
-        console.log('   - Client Reference ID:', clientReferenceId);
-        console.log('   - Stripe Link Base:', stripeLink);
-        console.log('   - Full Redirect URL:', redirectUrl);
-        console.log('==============================');
-        
-        // Redirect to Stripe
+        // Redirect to Stripe checkout
         window.location.href = redirectUrl;
       } else {
         // For regular signup, show success state

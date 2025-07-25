@@ -52,7 +52,7 @@ function Document() {
   return (
     <Html lang="en">
       <Head>
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/logo.png" />
         {/* Add any additional meta tags or links here */}
       </Head>
       <body>

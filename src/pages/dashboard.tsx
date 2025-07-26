@@ -63,7 +63,7 @@ export default function DashboardPage() {
     if (user?.email) {
       localStorage.setItem('nexsellpro_user', JSON.stringify({
         email: user.email,
-        plan: userPlan || 'free',
+        plan: userPlan?.plan || 'free',  // Extract just the plan string
         status: 'active',
         timestamp: Date.now()
       }));

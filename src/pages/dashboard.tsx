@@ -57,6 +57,20 @@ export default function DashboardPage() {
     checkAuthAndLoadData();
   }, [router]);
 
+  // Save user info to localStorage for extension
+  useEffect(() => {
+    // Save user info to localStorage for extension
+    if (user?.email) {
+      localStorage.setItem('nexsellpro_user', JSON.stringify({
+        email: user.email,
+        plan: userPlan || 'free',
+        status: 'active',
+        timestamp: Date.now()
+      }));
+      console.log('[NexSellPro] Saved user to localStorage');
+    }
+  }, [user, userPlan]);
+
   // Handle sign out
   async function handleSignOut() {
     setSigningOut(true);

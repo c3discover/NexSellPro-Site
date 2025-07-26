@@ -57,11 +57,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // User exists - return their plan status
+    // User exists - return their plan and status
     const isPaid = user.plan === 'founding'
     
     return res.status(200).json({ 
-      success: true, 
+      success: true,
+      status: user.status || 'inactive',  // Add this line
       isPaid,
       plan: user.plan,
       email: user.email

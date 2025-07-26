@@ -79,3 +79,23 @@ CREATE TRIGGER update_user_plan_last_updated
 CREATE TRIGGER update_user_profiles_last_updated
   BEFORE UPDATE ON user_profiles
   FOR EACH ROW EXECUTE FUNCTION update_last_updated_column();
+
+-- ===========================
+-- 📊 Migration: Add status column to user_plan
+-- ===========================
+-- Add status column with default value
+ALTER TABLE user_plan
+ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'inactive';
+
+-- Add last_login column for tracking user activity
+ALTER TABLE user_plan
+ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;
+
+-- Update existing users to active status
+UPDATE user_plan 
+SET status = 'active' 
+WHERE email IS NOT NULL AND status = 'inactive';
+
+-- Add comment for documentation
+COMMENT ON COLUMN user_plan.status IS 'User account status: inactive, active, suspended, cancelled';
+COMMENT ON COLUMN user_plan.last_login IS 'Timestamp of user last login for activity tracking';

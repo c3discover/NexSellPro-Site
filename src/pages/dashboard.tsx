@@ -3,6 +3,28 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { signOut, getUserProfile, getUserPlan, type UserProfile, type UserPlan, checkAuthStatus } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+
+// Function to update user status in database
+async function updateUserStatus(email: string) {
+  try {
+    const { error } = await supabase
+      .from('user_plan')
+      .update({ 
+        status: 'active',
+        last_login: new Date().toISOString()
+      })
+      .eq('email', email.toLowerCase());
+      
+    if (error) {
+      console.error('[NexSellPro] Error updating status:', error);
+    } else {
+      console.log('[NexSellPro] User status set to active');
+    }
+  } catch (err) {
+    console.error('[NexSellPro] Failed to update status:', err);
+  }
+}
 
 
 export default function DashboardPage() {
@@ -59,8 +81,11 @@ export default function DashboardPage() {
 
   // Save user info to localStorage for extension
   useEffect(() => {
-    // Save user info to localStorage for extension
     if (user?.email) {
+      // Update status in database
+      updateUserStatus(user.email);
+      
+      // Save user info to localStorage for extension
       localStorage.setItem('nexsellpro_user', JSON.stringify({
         email: user.email,
         plan: userPlan?.plan || 'free',  // Extract just the plan string

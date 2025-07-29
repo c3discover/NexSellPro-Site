@@ -21,6 +21,34 @@ const chrome = typeof window !== 'undefined' ? window.chrome : undefined;
 
 const EXTENSION_ID = 'oeoabefdhedmaeoghdmbcechbiepmfpc';
 
+// Debug function to test extension communication
+const testExtensionConnection = () => {
+  console.log('[Test] Checking extension connection...');
+  
+  // Method 1: Direct test
+  if (chrome?.runtime?.sendMessage) {
+    console.log('[Test] Chrome API available!');
+    chrome.runtime.sendMessage(
+      EXTENSION_ID,
+      { type: 'PING' },
+      (response) => {
+        if (chrome.runtime?.lastError) {
+          console.log('[Test] Error:', chrome.runtime.lastError.message);
+        } else {
+          console.log('[Test] Success:', response);
+        }
+      }
+    );
+  } else {
+    console.log('[Test] Chrome API NOT available');
+    
+    // Method 2: Try window.chrome
+    if ((window as any).chrome?.runtime) {
+      console.log('[Test] Found chrome on window object');
+    }
+  }
+};
+
 // Function to update user status in database
 async function updateUserStatus(email: string) {
   try {
@@ -202,6 +230,12 @@ export default function DashboardPage() {
                   className="btn-accent px-4 py-2 text-sm disabled:opacity-60"
                 >
                   {signingOut ? 'Signing out...' : 'Sign Out'}
+                </button>
+                <button
+                  onClick={testExtensionConnection}
+                  className="btn-secondary px-4 py-2 text-sm"
+                >
+                  Test Extension
                 </button>
               </div>
             </div>

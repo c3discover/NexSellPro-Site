@@ -5,6 +5,22 @@ import { signOut, getUserProfile, getUserPlan, type UserProfile, type UserPlan, 
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
+// Chrome extension types
+declare global {
+  interface Window {
+    chrome?: {
+      runtime?: {
+        sendMessage?: (extensionId: string, message: any, callback?: (response: any) => void) => void;
+        lastError?: { message: string };
+      };
+    };
+  }
+}
+
+const chrome = typeof window !== 'undefined' ? window.chrome : undefined;
+
+const EXTENSION_ID = 'oeoabefdhedmaeoghdmbcechbiepmfpc';
+
 // Function to update user status in database
 async function updateUserStatus(email: string) {
   try {
@@ -79,27 +95,56 @@ export default function DashboardPage() {
     checkAuthAndLoadData();
   }, [router]);
 
-  // Save user info to localStorage for extension
+  // Send user info to extension
   useEffect(() => {
-    if (user?.email) {
-      // Update status in database
-      updateUserStatus(user.email);
+    if (user?.email && userPlan) {
+      console.log('[NexSellPro] Attempting to sync with extension...');
       
-      // Save user info to localStorage for extension
-      localStorage.setItem('nexsellpro_user', JSON.stringify({
-        email: user.email,
-        plan: userPlan?.plan || 'free',  // Extract just the plan string
-        status: 'active',
-        timestamp: Date.now()
-      }));
-      console.log('[NexSellPro] Saved user to localStorage');
+      // Check if extension messaging is available
+      if (chrome?.runtime?.sendMessage) {
+        // Send auth data to extension
+        chrome.runtime.sendMessage!(
+          EXTENSION_ID,
+          {
+            type: 'AUTH_SUCCESS',
+            data: {
+              userId: user.id,
+              email: user.email,
+              plan: userPlan.plan || 'free',
+              firstName: userProfile?.first_name || '',
+              lastName: userProfile?.last_name || '',
+              authenticatedAt: new Date().toISOString()
+            }
+          },
+          (response) => {
+            if (chrome.runtime?.lastError) {
+              console.log('[NexSellPro] Extension not detected:', chrome.runtime.lastError.message);
+            } else {
+              console.log('[NexSellPro] Extension sync successful!', response);
+            }
+          }
+        );
+      } else {
+        console.log('[NexSellPro] Chrome extension API not available');
+      }
     }
-  }, [user, userPlan]);
+  }, [user, userPlan, userProfile]);
 
   // Handle sign out
   async function handleSignOut() {
     setSigningOut(true);
     try {
+      // Notify extension about logout
+      if (chrome?.runtime?.sendMessage) {
+        chrome.runtime.sendMessage(
+          EXTENSION_ID,
+          { type: 'LOGOUT' },
+          (response) => {
+            console.log('[NexSellPro] Extension notified of logout', response);
+          }
+        );
+      }
+      
       await signOut();
       router.replace('/');
     } catch (error) {

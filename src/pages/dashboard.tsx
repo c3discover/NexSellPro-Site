@@ -138,7 +138,7 @@ export default function DashboardPage() {
             data: {
               userId: user.id,
               email: user.email,
-              plan: userPlan.plan || 'free',
+              plan: userPlan.plan?.toLowerCase() || 'free',
               firstName: userProfile?.first_name || '',
               lastName: userProfile?.last_name || '',
               authenticatedAt: new Date().toISOString()

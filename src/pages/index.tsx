@@ -41,7 +41,7 @@ export default function HomePage() {
     <>
       <Head>
         <title>NexSellPro - Smart Product Analysis for Walmart Marketplace Sellers</title>
-        <meta name="description" content="Find profitable products instantly. NexSellPro analyzes Walmart listings to show profit, ROI, competition, and sales estimates. Join as a Founding Member for just $29." />
+        <meta name="description" content="Find profitable products quickly. NexSellPro analyzes Walmart listings to show profit, ROI, competition, and sales estimates. Join as a Founding Member for just $29." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
@@ -126,8 +126,8 @@ function HeroSection({ stripeLink }: { stripeLink: string }) {
         </h1>
         {/* Subheadline - explain the value */}
         <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-2xl mx-auto">
-          NexSellPro analyzes Walmart Marketplace listings instantly, showing you 
-          real profit margins, ROI, and competition data.
+          NexSellPro analyzes Walmart Marketplace listings in real-time, showing you 
+          estimated profit margins, ROI, and competition data.
         </p>
         {/* Call-to-action buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
@@ -175,9 +175,9 @@ function BenefitsSection() {
           {/* Benefit 1 */}
           <div className="text-center">
             <div className="text-4xl mb-4">💰</div>
-            <h3 className="text-xl font-semibold mb-2 text-gray-900">Instant Profit Analysis</h3>
+            <h3 className="text-xl font-semibold mb-2 text-gray-900">Quick Profit Analysis</h3>
             <p className="text-gray-700">
-              See real profit margins, ROI, and fees calculated automatically. 
+              See estimated profit margins, ROI, and fees calculated seamlessly. 
               Know if a product is worth selling before you buy.
             </p>
           </div>
@@ -327,7 +327,7 @@ function HowItWorksSection() {
             </div>
             <h3 className="text-xl font-semibold mb-2 text-gray-900">Find Winners</h3>
             <p className="text-gray-700">
-              Spot profitable products instantly. Export your finds to sheets
+              Spot profitable products quickly. Export your finds to sheets
             </p>
           </div>
         </div>
@@ -405,7 +405,7 @@ function PricingSection({ stripeLink }: { stripeLink: string }) {
           </a>
           
           <p className="mt-4 text-sm text-gray-600">
-            One-time payment • Instant access • 30-day guarantee • Free profit calculator always available
+            One-time payment • Quick access • 30-day money-back policy • Free profit calculator currently available
           </p>
         </div>
       </div>
@@ -429,7 +429,7 @@ function TargetAudienceSection() {
             <div className="text-3xl mb-3">📦</div>
             <h3 className="font-semibold mb-2 text-gray-900">Online Arbitrage Pros</h3>
             <p className="text-gray-700 text-sm">
-              Source profitable products faster with instant ROI calculations
+              Source profitable products faster with quick ROI calculations
             </p>
           </div>
           
@@ -480,11 +480,11 @@ function FAQSection() {
           {/* Question 2 */}
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <h3 className="text-lg font-semibold mb-2 text-gray-900">
-              How accurate are the profit calculations?
+              How reliable are the profit calculations?
             </h3>
             <p className="text-gray-700">
               We use Walmart&apos;s official fee structure and update it regularly. You can 
-              also customize your cost inputs for even more accurate calculations.
+              also customize your cost inputs for more personalized calculations.
             </p>
           </div>
           
@@ -497,7 +497,7 @@ function FAQSection() {
               The $29 Founding Member price is a one-time payment for access until launch 
               (minimum two months). After launch, you'll need a subscription, but founding 
               members get special discount codes and referral bonuses. The profit calculator 
-              and product overview will always be free.
+              and product overview will remain free.
             </p>
           </div>
           
@@ -507,8 +507,8 @@ function FAQSection() {
               Can I use this for retail arbitrage?
             </h3>
             <p className="text-gray-700">
-              Absolutely! NexSellPro is perfect for comparing in-store prices to 
-              Walmart.com. Many users scan products in stores and check profitability instantly.
+              Absolutely! NexSellPro is great for comparing in-store prices to 
+              Walmart.com. Many users scan products in stores and check profitability quickly.
             </p>
           </div>
           
@@ -518,8 +518,8 @@ function FAQSection() {
               Do you offer refunds?
             </h3>
             <p className="text-gray-700">
-              Yes, we offer a 30-day money-back guarantee. If NexSellPro doesn&apos;t 
-              help you find profitable products, we&apos;ll refund your purchase.
+              Yes, we offer a 30-day money-back policy. If NexSellPro doesn&apos;t 
+              help you find profitable products, we&apos;ll refund your purchase. Subject to our Terms.
             </p>
           </div>
         </div>

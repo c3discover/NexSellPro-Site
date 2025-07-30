@@ -35,7 +35,7 @@ function BetaSignupHeader() {
           </svg>
           <div className="text-sm">
             <p className="font-medium text-blue-400 mb-1">Why create an account first?</p>
-            <p className="text-gray-300">This ensures your payment is securely linked to your account for instant access, updates, and priority support.</p>
+            <p className="text-gray-300">This ensures your payment is securely linked to your account for quick access, updates, and priority support.</p>
           </div>
         </div>
       </div>
@@ -58,7 +58,7 @@ function BetaSignupHeader() {
           <svg className="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
           </svg>
-          <span>30-day money-back guarantee</span>
+                          <span>30-day money-back policy</span>
         </div>
       </div>
     </>
@@ -70,7 +70,7 @@ function FreeSignupHeader() {
   return (
     <>
       <h1 className="text-3xl font-bold mb-3 text-white">Create Your NexSellPro Account</h1>
-      <p className="text-gray-400 mb-8">Start analyzing Walmart products instantly</p>
+      <p className="text-gray-400 mb-8">Start analyzing Walmart products right away</p>
     </>
   );
 }

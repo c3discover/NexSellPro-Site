@@ -21,33 +21,7 @@ const chrome = typeof window !== 'undefined' ? window.chrome : undefined;
 
 const EXTENSION_ID = 'oeoabefdhedmaeoghdmbcechbiepmfpc';
 
-// Debug function to test extension communication
-const testExtensionConnection = () => {
-  console.log('[Test] Checking extension connection...');
-  
-  // Method 1: Direct test
-  if (chrome?.runtime?.sendMessage) {
-    console.log('[Test] Chrome API available!');
-    chrome.runtime.sendMessage(
-      EXTENSION_ID,
-      { type: 'PING' },
-      (response) => {
-        if (chrome.runtime?.lastError) {
-          console.log('[Test] Error:', chrome.runtime.lastError.message);
-        } else {
-          console.log('[Test] Success:', response);
-        }
-      }
-    );
-  } else {
-    console.log('[Test] Chrome API NOT available');
-    
-    // Method 2: Try window.chrome
-    if ((window as any).chrome?.runtime) {
-      console.log('[Test] Found chrome on window object');
-    }
-  }
-};
+
 
 // Function to update user status in database
 async function updateUserStatus(email: string) {
@@ -110,6 +84,14 @@ export default function DashboardPage() {
         ]);
         setUserProfile(profile);
         setUserPlan(plan);
+        
+        // Debug logging for plan data
+        console.log('[Dashboard] User plan data:', {
+          userId: authStatus.user.id,
+          plan: plan,
+          planType: plan?.plan,
+          isFounding: plan?.plan === 'founding'
+        });
         
       } catch (error) {
         console.error('Failed to check authentication or load user data:', error);
@@ -231,12 +213,6 @@ export default function DashboardPage() {
                 >
                   {signingOut ? 'Signing out...' : 'Sign Out'}
                 </button>
-                <button
-                  onClick={testExtensionConnection}
-                  className="btn-secondary px-4 py-2 text-sm"
-                >
-                  Test Extension
-                </button>
               </div>
             </div>
           </div>
@@ -268,6 +244,10 @@ export default function DashboardPage() {
                   <div>
                     <h3 className="text-xl font-semibold text-white mb-1">
                       {userPlan?.plan === 'founding' ? '🎯 Founding Member' : '🚀 Free Plan'}
+                      {/* Debug info - remove after fixing */}
+                      <span className="text-xs text-gray-400 ml-2">
+                        (Debug: {userPlan?.plan || 'null'})
+                      </span>
                     </h3>
                     <p className="text-gray-300">
                       {userPlan?.plan === 'founding' 

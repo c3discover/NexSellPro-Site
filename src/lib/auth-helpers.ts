@@ -515,4 +515,138 @@ export async function getSessionInfo(): Promise<{
  */
 export async function forceSessionRefresh(): Promise<SessionPersistenceResult> {
   return ensureSessionPersistence({ forceRefresh: true });
-} 
+}
+
+// ============================================================================
+// EXTENSION AUTHENTICATION SYNC
+// ============================================================================
+
+/**
+ * Extension ID for NexSellPro Chrome extension
+ * This will be replaced with the actual extension ID when published to Chrome Web Store
+ * For development, you can get this from chrome://extensions after loading the extension
+ */
+const EXTENSION_ID = process.env.NEXT_PUBLIC_EXTENSION_ID || 'oeoabefdhedmaeoghdmbcechbiepmfpc';
+
+/**
+ * Sync authentication state with the Chrome extension
+ * This function sends the current user's authentication data to the extension
+ * so it can maintain the same login state
+ * 
+ * @param user - The authenticated user object from Supabase
+ * @returns {Promise<boolean>} True if sync was successful, false otherwise
+ */
+export const syncAuthWithExtension = async (user: User): Promise<boolean> => {
+  try {
+    // Check if we're in a browser environment and Chrome extension API is available
+    if (typeof window === 'undefined' || typeof chrome === 'undefined' || !chrome.runtime) {
+      debugLog('Extension sync: Not in browser or Chrome extension API not available');
+      return false;
+    }
+
+    debugLog('Extension sync: Attempting to sync auth with extension', {
+      userId: user.id,
+      email: user.email,
+      plan: user.user_metadata?.plan || 'free'
+    });
+
+    // Send authentication data to the extension
+    chrome.runtime.sendMessage(
+      EXTENSION_ID,
+      {
+        type: 'AUTH_SUCCESS',
+        data: {
+          userId: user.id,
+          email: user.email,
+          plan: user.user_metadata?.plan || 'free'
+        }
+      },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          debugLog('Extension sync: Extension not installed or not responding', chrome.runtime.lastError);
+          return false;
+        } else {
+          debugLog('Extension sync: Auth synced successfully with extension', response);
+          return true;
+        }
+      }
+    );
+
+    return true;
+  } catch (error) {
+    debugLog('Extension sync: Could not communicate with extension', error);
+    return false;
+  }
+};
+
+/**
+ * Notify the extension when user logs out
+ * This function sends a logout message to the extension to clear its auth state
+ * 
+ * @returns {Promise<boolean>} True if notification was successful, false otherwise
+ */
+export const notifyExtensionLogout = async (): Promise<boolean> => {
+  try {
+    // Check if we're in a browser environment and Chrome extension API is available
+    if (typeof window === 'undefined' || typeof chrome === 'undefined' || !chrome.runtime) {
+      debugLog('Extension logout: Not in browser or Chrome extension API not available');
+      return false;
+    }
+
+    debugLog('Extension logout: Notifying extension of logout');
+
+    // Send logout message to the extension
+    chrome.runtime.sendMessage(
+      EXTENSION_ID,
+      { type: 'LOGOUT' },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          debugLog('Extension logout: Extension not installed or not responding', chrome.runtime.lastError);
+          return false;
+        } else {
+          debugLog('Extension logout: Extension notified successfully', response);
+          return true;
+        }
+      }
+    );
+
+    return true;
+  } catch (error) {
+    debugLog('Extension logout: Could not communicate with extension', error);
+    return false;
+  }
+};
+
+/**
+ * Check if the Chrome extension is installed and responding
+ * This function sends a ping message to the extension to verify it's available
+ * 
+ * @returns {Promise<boolean>} True if extension is installed and responding, false otherwise
+ */
+export const checkExtensionInstalled = async (): Promise<boolean> => {
+  try {
+    // Check if we're in a browser environment and Chrome extension API is available
+    if (typeof window === 'undefined' || typeof chrome === 'undefined' || !chrome.runtime) {
+      return false;
+    }
+
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        EXTENSION_ID,
+        { type: 'PING' },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            debugLog('Extension check: Extension not installed', chrome.runtime.lastError);
+            resolve(false);
+          } else {
+            debugLog('Extension check: Extension is installed and responding', response);
+            resolve(true);
+          }
+        }
+      );
+    });
+  } catch (error) {
+    debugLog('Extension check: Could not communicate with extension', error);
+    return false;
+  }
+}; 

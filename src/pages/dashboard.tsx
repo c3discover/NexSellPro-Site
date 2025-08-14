@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { signOut, getUserProfile, getUserPlan, type UserProfile, type UserPlan, checkAuthStatus } from '@/lib/supabase';
+import { notifyExtensionLogout } from '@/lib/auth-helpers';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
@@ -90,7 +91,7 @@ export default function DashboardPage() {
           userId: authStatus.user.id,
           plan: plan,
           planType: plan?.plan,
-          isFounding: plan?.plan === 'founding'
+          isFounding: plan?.plan?.toLowerCase() === 'founding'
         });
         
       } catch (error) {
@@ -196,7 +197,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <div className="flex items-center space-x-3">
-                {userPlan?.plan === 'free' && (
+                {userPlan?.plan?.toLowerCase() === 'free' && (
                   <a
                     href={stripeLink}
                     target="_blank"
@@ -242,21 +243,17 @@ export default function DashboardPage() {
               <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg p-6 mb-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xl font-semibold text-white mb-1">
-                      {userPlan?.plan === 'founding' ? '🎯 Founding Member' : '🚀 Free Plan'}
-                      {/* Debug info - remove after fixing */}
-                      <span className="text-xs text-gray-400 ml-2">
-                        (Debug: {userPlan?.plan || 'null'})
-                      </span>
-                    </h3>
-                    <p className="text-gray-300">
-                      {userPlan?.plan === 'founding' 
-                        ? 'Full access to all features until launch' 
-                        : 'Basic features available - upgrade for full access'
-                      }
-                    </p>
+                                         <h3 className="text-xl font-semibold text-white mb-1">
+                       {userPlan?.plan?.toLowerCase() === 'founding' ? '🎯 Founding Member' : '🚀 Free Plan'}
+                     </h3>
+                                         <p className="text-gray-300">
+                       {userPlan?.plan?.toLowerCase() === 'founding' 
+                         ? 'Full access to all features until launch' 
+                         : 'Basic features available - upgrade for full access'
+                       }
+                     </p>
                   </div>
-                  {userPlan?.plan === 'free' && (
+                  {userPlan?.plan?.toLowerCase() === 'free' && (
                     <a
                       href={stripeLink}
                       target="_blank"
@@ -388,7 +385,7 @@ export default function DashboardPage() {
                     </li>
                   </ul>
                   
-                  {userPlan?.plan === 'free' && (
+                  {userPlan?.plan?.toLowerCase() === 'free' && (
                     <div className="mt-6 pt-4 border-t border-accent/20">
                       <a
                         href={stripeLink}
@@ -405,7 +402,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Founding Member Bonus Section - Only shown to founding member plan users */}
-            {userPlan?.plan === 'founding' && (
+            {userPlan?.plan?.toLowerCase() === 'founding' && (
               <div className="card p-8">
                 <h2 className="text-2xl font-bold mb-4 gradient-text">
                   🎁 Founding Member Bonus

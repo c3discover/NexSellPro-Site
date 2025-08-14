@@ -23,6 +23,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
+import { syncAuthWithExtension } from '@/lib/auth-helpers';
 import Head from 'next/head';
 
 type AuthState = 'processing' | 'confirmed' | 'error' | 'password_reset' | 'expired_recovery';
@@ -166,6 +167,14 @@ export default function AuthCallback() {
     if (session?.user) {
       const userId = session.user.id;
       const userMetadata = session.user.user_metadata;
+
+      // Sync authentication with Chrome extension
+      try {
+        await syncAuthWithExtension(session.user);
+      } catch (error) {
+        console.warn('[Auth Callback] Failed to sync with extension:', error);
+        // Don't fail the auth flow if extension sync fails
+      }
 
       if (userId) {
         // Create/update user profile for ALL authenticated users

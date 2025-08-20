@@ -53,6 +53,13 @@ export default function DashboardPage() {
   const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
+  const [analytics, setAnalytics] = useState({
+    minutesSourcingThisWeek: 0,
+    productsAnalyzedToday: 0,
+    totalProductsAnalyzed: 0,
+    currentStreak: 0
+  });
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   // Environment-aware Stripe payment link (runtime evaluation)
   const isTesting = process.env.NEXT_PUBLIC_IS_TESTING === "true";
@@ -77,6 +84,9 @@ export default function DashboardPage() {
 
         // User is authenticated, set user data
         setUser(authStatus.user);
+        
+        // Fetch analytics data
+        fetchUserAnalytics(authStatus.user.id);
         
         // Fetch user profile and plan
         const [profile, plan] = await Promise.all([
@@ -105,6 +115,80 @@ export default function DashboardPage() {
     
     checkAuthAndLoadData();
   }, [router]);
+
+  // Fetch user analytics data from event_logs table
+  // This function retrieves user activity metrics including:
+  // - Minutes spent sourcing this week (from session_end events)
+  // - Products analyzed today (from product_sourced events)
+  // - Total products analyzed (all time count)
+  // - Current streak (placeholder for future implementation)
+  async function fetchUserAnalytics(userId: string) {
+    setAnalyticsLoading(true);
+    try {
+      // Get this week's sessions
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      
+      const { data: sessions, error: sessionsError } = await supabase
+        .from('event_logs')
+        .select('metadata')
+        .eq('user_id', userId)
+        .eq('event_type', 'session_end')
+        .gte('created_at', weekAgo.toISOString());
+
+      if (sessionsError) {
+        console.error('Error fetching sessions:', sessionsError);
+      }
+
+      const minutesThisWeek = sessions?.reduce((total, session) => {
+        return total + (session.metadata?.sessionLength || 0);
+      }, 0) || 0;
+
+      // Get today's products
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const { data: todayProducts, error: todayError } = await supabase
+        .from('event_logs')
+        .select('product_id')
+        .eq('user_id', userId)
+        .eq('event_type', 'product_sourced')
+        .gte('created_at', today.toISOString());
+
+      if (todayError) {
+        console.error('Error fetching today\'s products:', todayError);
+      }
+
+      // Get total products
+      const { count: totalProducts, error: totalError } = await supabase
+        .from('event_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('event_type', 'product_sourced');
+
+      if (totalError) {
+        console.error('Error fetching total products:', totalError);
+      }
+
+      setAnalytics({
+        minutesSourcingThisWeek: Math.round(minutesThisWeek),
+        productsAnalyzedToday: todayProducts?.length || 0,
+        totalProductsAnalyzed: totalProducts || 0,
+        currentStreak: 0 // Simplified for now
+      });
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+      // Set default values on error
+      setAnalytics({
+        minutesSourcingThisWeek: 0,
+        productsAnalyzedToday: 0,
+        totalProductsAnalyzed: 0,
+        currentStreak: 0
+      });
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }
 
   // Send user info to extension
   useEffect(() => {
@@ -439,10 +523,66 @@ export default function DashboardPage() {
               </div>
             )}
 
+            {/* Analytics Cards */}
+            {analytics.totalProductsAnalyzed > 0 && (
+              <div className="mb-8">
+                <h2 className="text-xl font-semibold mb-4 gradient-text">Your Progress</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="card p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20">
+                    <h3 className="text-sm font-medium text-gray-400">Minutes This Week</h3>
+                    <p className="text-3xl font-bold text-blue-400 mt-2">
+                      {analyticsLoading ? (
+                        <div className="animate-pulse bg-blue-400/20 h-8 w-16 rounded"></div>
+                      ) : (
+                        analytics.minutesSourcingThisWeek
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Keep grinding! 💪</p>
+                  </div>
+
+                  <div className="card p-6 bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20">
+                    <h3 className="text-sm font-medium text-gray-400">Products Today</h3>
+                    <p className="text-3xl font-bold text-green-400 mt-2">
+                      {analyticsLoading ? (
+                        <div className="animate-pulse bg-green-400/20 h-8 w-16 rounded"></div>
+                      ) : (
+                        analytics.productsAnalyzedToday
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Great progress! 📈</p>
+                  </div>
+
+                  <div className="card p-6 bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20">
+                    <h3 className="text-sm font-medium text-gray-400">Total Analyzed</h3>
+                    <p className="text-3xl font-bold text-purple-400 mt-2">
+                      {analyticsLoading ? (
+                        <div className="animate-pulse bg-purple-400/20 h-8 w-16 rounded"></div>
+                      ) : (
+                        analytics.totalProductsAnalyzed
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">All time 🎯</p>
+                  </div>
+
+                  <div className="card p-6 bg-gradient-to-br from-orange-500/10 to-orange-600/10 border border-orange-500/20">
+                    <h3 className="text-sm font-medium text-gray-400">Day Streak</h3>
+                    <p className="text-3xl font-bold text-orange-400 mt-2">
+                      {analyticsLoading ? (
+                        <div className="animate-pulse bg-orange-400/20 h-8 w-16 rounded"></div>
+                      ) : (
+                        analytics.currentStreak
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">🔥 Coming soon!</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Quick Stats */}
             <div className="grid md:grid-cols-3 gap-6">
               <div className="card p-6 text-center bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20">
-                <div className="text-4xl font-bold text-blue-400 mb-2">0</div>
+                <div className="text-4xl font-bold text-blue-400 mb-2">{analytics.totalProductsAnalyzed}</div>
                 <div className="text-gray-300 font-medium">Products Analyzed</div>
                 <div className="text-xs text-gray-500 mt-1">Start analyzing to see your progress</div>
               </div>
